@@ -1,0 +1,318 @@
+[
+ {
+  "id": "borojo",
+  "nombre": "Borojó",
+  "sinonimos": [],
+  "categoria": "frutas",
+  "fuente": "Burbano Pulles (2014), Rev. Sathiri, UPEC Ecuador",
+  "por_100g": {
+   "kcal": 127,
+   "proteina_g": 1.18,
+   "carbos_g": 31.7,
+   "grasa_g": 0.05,
+   "fibra_g": 2.3,
+   "calcio_mg": 25,
+   "hierro_mg": 1.5,
+   "fosforo_mg": 160
+  },
+  "porciones_es": [
+   {
+    "texto": "1 porción de pulpa",
+    "gramos": 100
+   },
+   {
+    "texto": "pulpa para 1 vaso de jugo",
+    "gramos": 50
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "araza",
+  "nombre": "Arazá",
+  "sinonimos": [],
+  "categoria": "frutas",
+  "fuente": "INPA, Acta Amazonica 13(4), 1983",
+  "por_100g": {
+   "kcal": 40,
+   "proteina_g": 0.6,
+   "carbos_g": 8.9,
+   "grasa_g": 0.2,
+   "vit_c_mg": 23.3,
+   "vit_a_ug": 33
+  },
+  "porciones_es": [
+   {
+    "texto": "1 unidad pequeña",
+    "gramos": 66
+   },
+   {
+    "texto": "½ taza de pulpa",
+    "gramos": 100
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "arracacha",
+  "nombre": "Arracacha",
+  "sinonimos": [],
+  "categoria": "carbohidratos",
+  "fuente": "TACO 4ª ed. (NEPA-UNICAMP, Brasil), batata baroa cocida",
+  "por_100g": {
+   "kcal": 80,
+   "proteina_g": 0.9,
+   "carbos_g": 18.9,
+   "grasa_g": 0.2,
+   "fibra_g": 1.8,
+   "sodio_mg": 2,
+   "calcio_mg": 12,
+   "hierro_mg": 0.4,
+   "magnesio_mg": 8,
+   "fosforo_mg": 29,
+   "potasio_mg": 258,
+   "zinc_mg": 0.4,
+   "vit_c_mg": 17.1,
+   "b1_mg": 0.06,
+   "b2_mg": 0,
+   "b3_mg": 1.98
+  },
+  "porciones_es": [
+   {
+    "texto": "1 trozo mediano cocido",
+    "gramos": 100
+   },
+   {
+    "texto": "½ taza en cubos",
+    "gramos": 75
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "guascas",
+  "nombre": "Guascas",
+  "sinonimos": [],
+  "categoria": "verduras",
+  "fuente": "Odhav et al. (2007), J. Food Compos. Anal. 20:430-435",
+  "por_100g": {
+   "kcal": 41,
+   "proteina_g": 4,
+   "carbos_g": 5.29,
+   "grasa_g": 0.5,
+   "fibra_g": 1.24
+  },
+  "porciones_es": [
+   {
+    "texto": "1 cucharada picada",
+    "gramos": 3
+   },
+   {
+    "texto": "1 manojito para ajiaco",
+    "gramos": 10
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "cuy",
+  "nombre": "Cuy (carne cruda)",
+  "sinonimos": [],
+  "categoria": "proteinas",
+  "fuente": "Tablas Peruanas de Composición de Alimentos 2023 (INS-CENAN)",
+  "por_100g": {
+   "kcal": 96,
+   "proteina_g": 19,
+   "carbos_g": 0.1,
+   "grasa_g": 1.6,
+   "fibra_g": 0,
+   "calcio_mg": 29,
+   "hierro_mg": 1.9,
+   "fosforo_mg": 258,
+   "zinc_mg": 1.57,
+   "vit_c_mg": 0,
+   "vit_a_ug": 0,
+   "b1_mg": 0.06,
+   "b2_mg": 0.14,
+   "b3_mg": 6.5
+  },
+  "porciones_es": [
+   {
+    "texto": "¼ de cuy",
+    "gramos": 150
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "tomate-de-arbol",
+  "nombre": "Tomate de árbol",
+  "sinonimos": [
+   "tamarillo"
+  ],
+  "categoria": "frutas",
+  "fuente": "New Zealand FOODfiles (Athar et al. 2003)",
+  "por_100g": {
+   "kcal": 31,
+   "proteina_g": 1.99,
+   "carbos_g": 7.1,
+   "grasa_g": 0.36,
+   "fibra_g": 3.3,
+   "azucar_g": 3.5,
+   "sodio_mg": 1.44,
+   "calcio_mg": 10.7,
+   "hierro_mg": 0.57,
+   "magnesio_mg": 20.6,
+   "fosforo_mg": 38.9,
+   "potasio_mg": 321,
+   "zinc_mg": 0.15,
+   "vit_c_mg": 29.8,
+   "vit_a_ug": 95,
+   "folato_ug": 4,
+   "b1_mg": 0.043,
+   "b2_mg": 0.024,
+   "b3_mg": 0.271
+  },
+  "porciones_es": [
+   {
+    "texto": "1 unidad mediana sin cáscara",
+    "gramos": 60
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "pitahaya",
+  "nombre": "Pitahaya amarilla",
+  "sinonimos": [
+   "pitaya",
+   "fruta del dragón"
+  ],
+  "categoria": "frutas",
+  "fuente": "Rev. Fac. Agron. (LUZ), Universidad del Zulia, 2022",
+  "por_100g": {
+   "kcal": 57,
+   "proteina_g": 0.22,
+   "carbos_g": 14.3,
+   "grasa_g": 0.41,
+   "fibra_g": 1.27,
+   "azucar_g": 13.5,
+   "sodio_mg": 1.43,
+   "calcio_mg": 11.7,
+   "hierro_mg": 2.1,
+   "magnesio_mg": 16.1,
+   "fosforo_mg": 18,
+   "potasio_mg": 98.4,
+   "zinc_mg": 0.44,
+   "vit_c_mg": 11.3
+  },
+  "porciones_es": [
+   {
+    "texto": "1 unidad mediana (pulpa)",
+    "gramos": 150
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "mamoncillo",
+  "nombre": "Mamoncillo",
+  "sinonimos": [
+   "mamón"
+  ],
+  "categoria": "frutas",
+  "fuente": "Tabla de Composición de Alimentos de Centroamérica (INCAP/OPS)",
+  "por_100g": {
+   "kcal": 59,
+   "proteina_g": 1.1,
+   "carbos_g": 19.9,
+   "grasa_g": 0.2,
+   "sodio_mg": 4,
+   "calcio_mg": 12,
+   "hierro_mg": 0.6,
+   "magnesio_mg": 58.1,
+   "fosforo_mg": 20,
+   "potasio_mg": 180,
+   "zinc_mg": 0.6,
+   "vit_c_mg": 5,
+   "vit_a_ug": 21,
+   "b1_mg": 0.05,
+   "b2_mg": 0.02,
+   "b3_mg": 0.7
+  },
+  "porciones_es": [
+   {
+    "texto": "10 unidades (pulpa)",
+    "gramos": 50
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "chontaduro",
+  "nombre": "Chontaduro",
+  "sinonimos": [
+   "pejibaye",
+   "pupunha"
+  ],
+  "categoria": "frutas",
+  "fuente": "TACO 4ª ed. (NEPA-UNICAMP, Brasil), pupunha cocida",
+  "por_100g": {
+   "kcal": 219,
+   "proteina_g": 2.5,
+   "carbos_g": 29.6,
+   "grasa_g": 12.8,
+   "fibra_g": 4.3,
+   "sodio_mg": 1,
+   "calcio_mg": 28,
+   "hierro_mg": 0.5,
+   "magnesio_mg": 25,
+   "fosforo_mg": 49,
+   "potasio_mg": 303,
+   "zinc_mg": 0.3,
+   "vit_c_mg": 2.2,
+   "vit_a_ug": 438,
+   "b1_mg": 0,
+   "b2_mg": 0.09,
+   "b3_mg": 0
+  },
+  "porciones_es": [
+   {
+    "texto": "1 unidad mediana",
+    "gramos": 35
+   },
+   {
+    "texto": "3 unidades",
+    "gramos": 100
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ }
+]
