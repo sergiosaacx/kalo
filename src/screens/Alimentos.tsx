@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Boton, Chips, u } from '../components/ui';
 import { CATEGORIAS, MINERALES, VITAMINAS, fotoDe, nutrientes, sinTildes, useAlimentos, type AlimentoDB } from '../data/alimentos';
+import { COMIDAS, agregarAlPlan, comidaDeAhora, nombreComida, type ComidaId } from '../data/plan';
+import { useSesion } from '../data/sesion';
 import { fmt } from '../logic/energia';
 import { C } from '../theme';
 
@@ -13,7 +16,7 @@ function Miniatura({ a, size }: { a: AlimentoDB; size: number }) {
     : <View style={{ width: size, height: size, borderRadius: size > 50 ? 14 : 12, backgroundColor: C.surface2 }} />;
 }
 
-export function Alimentos() {
+export function Alimentos({ destino, onAgregado }: { destino: ComidaId | null; onAgregado: () => void }) {
   const { lista, error } = useAlimentos();
   const [query, setQuery] = useState('');
   const [abierto, setAbierto] = useState<AlimentoDB | null>(null);
@@ -24,12 +27,12 @@ export function Alimentos() {
     return q ? lista.filter(a => a.busqueda.includes(q)) : lista;
   }, [lista, query]);
 
-  if (abierto) return <Ficha a={abierto} volver={() => setAbierto(null)} />;
+  if (abierto) return <Ficha a={abierto} destino={destino} volver={() => setAbierto(null)} onAgregado={onAgregado} />;
 
   return (
     <View style={{ gap: 14 }}>
       <View style={{ gap: 2, paddingTop: 4 }}>
-        <Text style={s.muted13}>{lista ? `${lista.length} alimentos` : 'Cargando…'}</Text>
+        <Text style={s.muted13}>{destino ? `Agregando a ${nombreComida(destino).toLowerCase()} de hoy` : lista ? `${lista.length} alimentos` : 'Cargando…'}</Text>
         <Text style={s.h1}>Alimentos</Text>
       </View>
       <TextInput
@@ -62,8 +65,19 @@ export function Alimentos() {
   );
 }
 
-function Ficha({ a, volver }: { a: AlimentoDB; volver: () => void }) {
+function Ficha({ a, destino, volver, onAgregado }: { a: AlimentoDB; destino: ComidaId | null; volver: () => void; onAgregado: () => void }) {
+  const { activo } = useSesion();
   const [mult, setMult] = useState(1);
+  const [comida, setComida] = useState<ComidaId>(destino ?? comidaDeAhora());
+  const [agregando, setAgregando] = useState(false);
+  const [errorAgregar, setErrorAgregar] = useState<string | null>(null);
+  const agregar = async () => {
+    if (!activo) return;
+    setAgregando(true);
+    const e = await agregarAlPlan(activo.id, comida, a.id, mult);
+    setAgregando(false);
+    if (e) setErrorAgregar(e); else onAgregado();
+  };
   const n = nutrientes(a, mult);
   const pk = n.p * 4, ck = n.c * 4, fk = n.gr * 9, tk = pk + ck + fk || 1;
   const uri = fotoDe(a);
@@ -128,6 +142,12 @@ function Ficha({ a, volver }: { a: AlimentoDB; volver: () => void }) {
 
       {vit.length > 0 && <View style={[s.card, { gap: 10 }]}><Text style={s.overline}>Vitaminas · % del valor diario</Text>{vit}</View>}
       {min.length > 0 && <View style={[s.card, { gap: 10 }]}><Text style={s.overline}>Minerales · % del valor diario</Text>{min}</View>}
+
+      <View style={[s.card, { gap: 12 }]}>
+        <Chips<ComidaId> opciones={COMIDAS} valor={comida} onCambio={setComida} />
+        {errorAgregar && <Text style={u.error}>{errorAgregar}</Text>}
+        <Boton texto={`Agregar a ${nombreComida(comida).toLowerCase()} · hoy`} onPress={agregar} cargando={agregando} />
+      </View>
 
       <Text style={[s.muted12, { paddingHorizontal: 4 }]}>Fuente: {a.fuente.startsWith('USDA') ? 'USDA FoodData Central' : a.fuente}</Text>
     </View>

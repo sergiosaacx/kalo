@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Anillo } from '../components/Anillo';
-import { ALIMENTOS, COMIDAS, PERFIL_DEMO, PLAN_HOY, type ComidaId, type Item } from '../data/demo';
+import { nutrientes, useAlimentos, type AlimentoDB } from '../data/alimentos';
+import { COMIDAS, usePlanDia, type ComidaId, type ItemPlan } from '../data/plan';
+import { useSesion } from '../data/sesion';
 import { conSigno, fmt, gasto, macrosObjetivo } from '../logic/energia';
 import { C } from '../theme';
 
@@ -9,33 +11,40 @@ const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', '
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const RANGOS = [['hoy', 'Hoy'], ['semana', 'Semana'], ['custom', 'Personalizado']] as const;
 
-function sumar(items: Item[], soloComido: boolean) {
+function sumar(items: ItemPlan[], porId: Map<string, AlimentoDB>, soloComido: boolean) {
   return items.reduce((a, it) => {
-    if (soloComido && !it.comido) return a;
-    const f = ALIMENTOS[it.id];
-    a.k += f.kcal * it.q; a.p += f.p * it.q; a.c += f.c * it.q; a.g += f.g * it.q;
+    const f = porId.get(it.alimento_id);
+    if (!f || (soloComido && !it.comido)) return a;
+    const n = nutrientes(f, it.cantidad);
+    a.k += n.kcal; a.p += n.p; a.c += n.c; a.g += n.gr;
     return a;
   }, { k: 0, p: 0, c: 0, g: 0 });
 }
 
-export function Hoy({ irA }: { irA: (tab: string) => void }) {
+export function Hoy({ irA, agregarA }: { irA: (tab: string) => void; agregarA: (c: ComidaId) => void }) {
   const [rango, setRango] = useState<string>('hoy');
-  const [plan, setPlan] = useState(PLAN_HOY);
-  const pr = PERFIL_DEMO;
+  const { activo } = useSesion();
+  const { lista } = useAlimentos();
+  const { items, alternar } = usePlanDia(activo?.id);
+  if (!activo) return null;
+  const pr = activo;
+  const porId = new Map((lista ?? []).map(a => [a.id, a]));
+  const todos = items ?? [];
   const en = gasto(pr);
   const tgt = en.objetivo;
-  const hoy = sumar(COMIDAS.flatMap(([m]) => plan[m]), true);
+  const hoy = sumar(todos, porId, true);
   const rem = tgt - hoy.k;
   const obj = macrosObjetivo(pr, tgt);
   const d = new Date();
   const fecha = `${DIAS[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]}`;
 
-  const msg = rem >= 0
-    ? `Vas muy bien, ${pr.nombre}. Te quedan ${fmt(rem)} kcal y sigues en déficit.`
-    : `Te pasaste ${fmt(-rem)} kcal. Una caminata de 30 minutos ayuda a equilibrar.`;
-
-  const alternar = (m: ComidaId, i: number) =>
-    setPlan(p => ({ ...p, [m]: p[m].map((it, j) => (j === i ? { ...it, comido: !it.comido } : it)) }));
+  const msg = todos.length === 0
+    ? `Hola, ${pr.nombre}. Hoy te tocan ${fmt(tgt)} kcal. Agrega lo que comas y marca el círculo cuando lo comas.`
+    : pr.meta === 'bajar'
+      ? (rem >= 0 ? `Vas muy bien, ${pr.nombre}. Te quedan ${fmt(rem)} kcal y sigues en déficit.` : `Te pasaste ${fmt(-rem)} kcal. Una caminata de 30 minutos ayuda a equilibrar.`)
+      : pr.meta === 'subir'
+        ? (rem > 0 ? `Te faltan ${fmt(rem)} kcal para tu meta de hoy. Un snack más y lo logras.` : 'Meta cumplida. Hoy sumaste lo que tu cuerpo necesita para crecer.')
+        : (rem > 0 ? `Te quedan ${fmt(rem)} kcal para mantenerte en equilibrio.` : `Llevas ${fmt(-rem)} kcal sobre tu equilibrio de hoy.`);
 
   const kpis = [
     { label: rem >= 0 ? 'Restante' : 'Exceso', value: fmt(Math.abs(rem)), color: C.accent },
@@ -124,31 +133,46 @@ export function Hoy({ irA }: { irA: (tab: string) => void }) {
           </View>
 
           {COMIDAS.map(([m, label]) => {
-            const items = plan[m];
+            const delaComida = todos.filter(it => it.comida === m);
             return (
               <View key={m} style={[s.card, { padding: 16, paddingBottom: 8 }]}>
                 <View style={[s.row, { paddingBottom: 6, alignItems: 'baseline' }]}>
                   <Text style={[s.b14, { fontSize: 16, fontWeight: '700' }]}>{label}</Text>
-                  <Text style={s.muted13}>{fmt(sumar(items, true).k)} / {fmt(sumar(items, false).k)} kcal</Text>
+                  <Text style={s.muted13}>{fmt(sumar(delaComida, porId, true).k)} / {fmt(sumar(delaComida, porId, false).k)} kcal</Text>
                 </View>
-                {items.map((it, i) => {
-                  const f = ALIMENTOS[it.id];
+                {delaComida.length === 0 && items !== null && (
+                  <Pressable onPress={() => agregarA(m)} style={s.vacio}>
+                    <Text style={[s.muted13, { fontSize: 14 }]}>Sin alimentos · Agregar</Text>
+                  </Pressable>
+                )}
+                {delaComida.map(it => {
+                  const f = porId.get(it.alimento_id);
+                  if (!f) return null;
+                  const n = nutrientes(f, it.cantidad);
                   const op = it.comido ? 1 : 0.6;
+                  const q = it.cantidad;
                   return (
-                    <View key={it.id + i} style={s.item}>
-                      <Pressable onPress={() => alternar(m, i)}
+                    <View key={it.id} style={s.item}>
+                      <Pressable onPress={() => alternar(it.id)}
                         style={[s.check, { borderColor: it.comido ? C.accent : '#4A4A4E', backgroundColor: it.comido ? C.accent : 'transparent' }]}>
                         <Text style={s.checkTxt}>{it.comido ? '✓' : ''}</Text>
                       </Pressable>
-                      <View style={s.thumb} />
+                      {f.foto_url ? <Image source={{ uri: f.foto_url }} style={s.thumb} /> : <View style={s.thumb} />}
                       <View style={{ flex: 1, minWidth: 0, gap: 2, opacity: op }}>
-                        <Text style={[s.b14, { fontSize: 15 }]}>{f.nombre}</Text>
-                        <Text style={[s.muted13, { fontSize: 12 }]}>{f.porcion}</Text>
+                        <Text style={[s.b14, { fontSize: 15 }]} numberOfLines={1}>{f.nombre}</Text>
+                        <Text style={[s.muted13, { fontSize: 12 }]} numberOfLines={1}>
+                          {q === 1 ? f.porcion_base.texto : `${q.toLocaleString('es-CO')} × ${f.porcion_base.texto}`}
+                        </Text>
                       </View>
-                      <Text style={[s.b14, { opacity: op }]}>{fmt(f.kcal * it.q)}</Text>
+                      <Text style={[s.b14, { opacity: op }]}>{fmt(n.kcal)}</Text>
                     </View>
                   );
                 })}
+                {delaComida.length > 0 && (
+                  <Pressable onPress={() => agregarA(m)} style={{ minHeight: 40, justifyContent: 'center', borderTopWidth: 1, borderTopColor: C.divider }}>
+                    <Text style={[s.link, { fontSize: 14 }]}>+ Agregar alimento</Text>
+                  </Pressable>
+                )}
               </View>
             );
           })}
@@ -185,4 +209,5 @@ const s = StyleSheet.create({
   check: { width: 28, height: 28, borderRadius: 14, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   checkTxt: { color: C.onAccent, fontSize: 14, fontWeight: '700' },
   thumb: { width: 44, height: 44, borderRadius: 12, backgroundColor: C.surface2 },
+  vacio: { borderWidth: 1, borderStyle: 'dashed', borderColor: C.border, borderRadius: 14, padding: 12, marginTop: 6, marginBottom: 8, alignItems: 'center' },
 });

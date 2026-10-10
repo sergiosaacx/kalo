@@ -1,0 +1,111 @@
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import type { Session } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
+import type { Meta, Perfil, Sexo, Trabajo } from '../logic/energia';
+import { AVATAR_COLORS } from '../theme';
+
+// Fila de public.perfiles
+interface PerfilDB {
+  id: string; nombre: string; edad: number; sexo: Sexo; estatura_cm: number; peso_kg: number; peso_inicial_kg: number;
+  meta: Meta; peso_meta_kg: number; ritmo_kg_semana: number; trabajo: Trabajo; pasos_dia: number; ejercicio_min: number;
+  sueno_h: number; color: string; activo: boolean;
+}
+
+const desdeDB = (r: PerfilDB): Perfil & { activo: boolean } => ({
+  id: r.id, nombre: r.nombre, edad: r.edad, sexo: r.sexo, estatura: Number(r.estatura_cm), peso: Number(r.peso_kg),
+  pesoInicial: Number(r.peso_inicial_kg), meta: r.meta, pesoMeta: Number(r.peso_meta_kg), ritmo: Number(r.ritmo_kg_semana),
+  trabajo: r.trabajo, pasos: r.pasos_dia, ejercicio: r.ejercicio_min, sueno: Number(r.sueno_h), color: r.color, activo: r.activo,
+});
+
+const haciaDB = (p: Partial<Perfil>) => {
+  const m: Record<string, unknown> = {};
+  if (p.nombre !== undefined) m.nombre = p.nombre;
+  if (p.edad !== undefined) m.edad = p.edad;
+  if (p.sexo !== undefined) m.sexo = p.sexo;
+  if (p.estatura !== undefined) m.estatura_cm = p.estatura;
+  if (p.peso !== undefined) m.peso_kg = p.peso;
+  if (p.pesoInicial !== undefined) m.peso_inicial_kg = p.pesoInicial;
+  if (p.meta !== undefined) m.meta = p.meta;
+  if (p.pesoMeta !== undefined) m.peso_meta_kg = p.pesoMeta;
+  if (p.ritmo !== undefined) m.ritmo_kg_semana = p.ritmo;
+  if (p.trabajo !== undefined) m.trabajo = p.trabajo;
+  if (p.pasos !== undefined) m.pasos_dia = p.pasos;
+  if (p.ejercicio !== undefined) m.ejercicio_min = p.ejercicio;
+  if (p.sueno !== undefined) m.sueno_h = p.sueno;
+  if (p.color !== undefined) m.color = p.color;
+  return m;
+};
+
+export type PerfilActivo = Perfil & { activo: boolean };
+
+interface Ctx {
+  cargando: boolean;
+  sesion: Session | null;
+  perfiles: PerfilActivo[];
+  activo: PerfilActivo | null;
+  crearPerfil: (p: Omit<Perfil, 'id' | 'color'>) => Promise<string | null>;
+  actualizarPerfil: (id: string, p: Partial<Perfil>) => Promise<string | null>;
+  activar: (id: string) => Promise<void>;
+  salir: () => Promise<void>;
+}
+
+const SesionCtx = createContext<Ctx | null>(null);
+export const useSesion = () => {
+  const c = useContext(SesionCtx);
+  if (!c) throw new Error('useSesion fuera de SesionProvider');
+  return c;
+};
+
+export function SesionProvider({ children }: { children: React.ReactNode }) {
+  const [sesion, setSesion] = useState<Session | null>(null);
+  const [perfiles, setPerfiles] = useState<PerfilActivo[]>([]);
+  const [cargando, setCargando] = useState(true);
+
+  const cargarPerfiles = useCallback(async () => {
+    const { data } = await supabase.from('perfiles').select('*').order('creado');
+    setPerfiles((data as PerfilDB[] | null ?? []).map(desdeDB));
+  }, []);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data }) => {
+      setSesion(data.session);
+      if (data.session) await cargarPerfiles();
+      setCargando(false);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      setSesion(s);
+      if (s) cargarPerfiles(); else setPerfiles([]);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, [cargarPerfiles]);
+
+  const activar = useCallback(async (id: string) => {
+    setPerfiles(ps => ps.map(p => ({ ...p, activo: p.id === id })));
+    await supabase.rpc('activar_perfil', { p: id });
+  }, []);
+
+  const crearPerfil = useCallback(async (p: Omit<Perfil, 'id' | 'color'>) => {
+    const color = AVATAR_COLORS[perfiles.length % AVATAR_COLORS.length];
+    const { data, error } = await supabase.from('perfiles').insert({ ...haciaDB({ ...p, color }) }).select('id').single();
+    if (error || !data) return 'No pudimos crear el perfil. Revisa tu conexión e inténtalo de nuevo.';
+    await supabase.rpc('activar_perfil', { p: data.id });
+    await cargarPerfiles();
+    return null;
+  }, [perfiles.length, cargarPerfiles]);
+
+  const actualizarPerfil = useCallback(async (id: string, p: Partial<Perfil>) => {
+    setPerfiles(ps => ps.map(x => (x.id === id ? { ...x, ...p } : x)));
+    const { error } = await supabase.from('perfiles').update(haciaDB(p)).eq('id', id);
+    if (error) { await cargarPerfiles(); return 'No pudimos guardar los cambios. Inténtalo de nuevo.'; }
+    return null;
+  }, [cargarPerfiles]);
+
+  const salir = useCallback(async () => { await supabase.auth.signOut(); }, []);
+
+  const activo = perfiles.find(p => p.activo) ?? perfiles[0] ?? null;
+  return (
+    <SesionCtx.Provider value={{ cargando, sesion, perfiles, activo, crearPerfil, actualizarPerfil, activar, salir }}>
+      {children}
+    </SesionCtx.Provider>
+  );
+}
