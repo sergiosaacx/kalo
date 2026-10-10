@@ -7,9 +7,11 @@ const DATOS = path.join(__dirname, '..');
 const { porcionesEs, porcionBase } = require('./porciones-es');
 
 const leer = f => fs.existsSync(path.join(DATOS, f)) ? JSON.parse(fs.readFileSync(path.join(DATOS, f), 'utf8')) : [];
-const alimentos = Object.fromEntries([...leer('alimentos-usda.json'), ...leer('recetas-calculadas.json'), ...leer('alimentos-investigados.json')]
-  .map(a => [a.id, { ...a, base: porcionBase(a.porciones_es || porcionesEs(a.porciones)) }]));
 const menus = leer('menus-colombianos.json');
+const ajustes = leer('porciones-ajustes.json');
+// Misma porción base que guarda sql-alimentos.js (ajuste a mano o la más casera)
+const alimentos = Object.fromEntries([...leer('alimentos-usda.json'), ...leer('recetas-calculadas.json'), ...leer('alimentos-investigados.json')]
+  .map(a => [a.id, { ...a, base: ajustes[a.id] || porcionBase(a.porciones_es || porcionesEs(a.porciones)) }]));
 const q = s => `'${String(s).replace(/'/g, "''")}'`;
 
 let sql = `delete from public.opciones where fuente = 'kalo';\n`;

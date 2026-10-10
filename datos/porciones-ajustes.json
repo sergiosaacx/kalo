@@ -1,0 +1,23 @@
+{
+  "_nota": "Porción por defecto escogida a mano cuando la del USDA no es la casera de aquí. Se agrega al inicio de la lista de porciones.",
+  "lulo": { "texto": "1 unidad", "gramos": 100 },
+  "pulpa-lulo": { "texto": "1 porción para jugo", "gramos": 70 },
+  "pulpa-mora": { "texto": "1 porción para jugo", "gramos": 60 },
+  "pulpa-maracuya": { "texto": "1 porción para jugo", "gramos": 50 },
+  "pulpa-guanabana": { "texto": "1 porción para jugo", "gramos": 80 },
+  "pulpa-mango": { "texto": "1 porción para jugo", "gramos": 80 },
+  "arepa-maiz-blanco": { "texto": "1 unidad", "gramos": 90 },
+  "arepa-maiz-amarillo": { "texto": "1 unidad", "gramos": 90 },
+  "arepa-queso": { "texto": "1 unidad", "gramos": 100 },
+  "arepa-boyacense": { "texto": "1 unidad", "gramos": 100 },
+  "pechuga": { "texto": "1 filete", "gramos": 120 },
+  "pechuga-cocida": { "texto": "1 porción", "gramos": 100 },
+  "papa-criolla": { "texto": "5 unidades", "gramos": 100 },
+  "empanada": { "texto": "1 unidad", "gramos": 100 },
+  "tamal": { "texto": "1 unidad", "gramos": 250 },
+  "queso-campesino": { "texto": "1 tajada", "gramos": 40 },
+  "queso-costeno": { "texto": "1 tajada", "gramos": 40 },
+  "cuajada": { "texto": "1 tajada", "gramos": 40 },
+  "huevo": { "texto": "1 unidad", "gramos": 50 },
+  "banano": { "texto": "1 mediano", "gramos": 118 }
+}

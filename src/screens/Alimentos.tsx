@@ -94,7 +94,7 @@ function Ficha({ a, volver }: { a: AlimentoDB; volver: () => void }) {
 
       <View style={[s.card, { gap: 16 }]}>
         <View style={s.rowEntre}>
-          <View>
+          <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={s.hero50}>{fmt(n.kcal)}</Text>
             <Text style={s.muted13}>kcal · {fq(mult)} × {a.porcion_base.texto} ({fmt(n.g)} g)</Text>
           </View>
@@ -149,7 +149,7 @@ const s = StyleSheet.create({
   card: { backgroundColor: C.surface, borderRadius: 22, padding: 16 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
   rowBorde: { borderTopWidth: 1, borderTopColor: C.divider },
-  rowEntre: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  rowEntre: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
   hero: { width: '100%', height: 230, borderRadius: 24, backgroundColor: C.surface2 },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   stepBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: C.surface3, alignItems: 'center', justifyContent: 'center' },
