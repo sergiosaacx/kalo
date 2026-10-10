@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Kalo",
+    "slug": "kalo",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0B0B0C",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E8774A",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./public/icon-192.png",
+      "output": "single",
+      "name": "Kalo",
+      "themeColor": "#0B0B0C",
+      "backgroundColor": "#0B0B0C"
+    },
+    "experiments": {
+      "baseUrl": "/kalo"
+    }
+  }
+}

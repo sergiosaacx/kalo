@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Kalo</title>
+    <!-- PWA: se instala desde Safari con Compartir → Agregar a inicio -->
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="apple-touch-icon" href="./icon-180.png" />
+    <link rel="icon" type="image/png" href="./icon-192.png" />
+    <meta name="theme-color" content="#0B0B0C" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Kalo" />
+    <style id="expo-reset">
+      html,
+      body {
+        height: 100%;
+        background: #0B0B0C;
+        color-scheme: dark;
+      }
+      body {
+        overflow: hidden;
+        margin: 0;
+        -webkit-tap-highlight-color: transparent;
+      }
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+      /* Fuente del handoff para todo el texto */
+      #root, #root * {
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>Kalo necesita JavaScript para funcionar.</noscript>
+    <div id="root"></div>
+  </body>
+</html>
