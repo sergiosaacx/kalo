@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const DATOS = path.join(__dirname, '..');
-const { porcionesEs, porcionBase } = require('./porciones-es');
+const { porcionesDe, baseDe } = require('./porcion-base');
 const leer = f => fs.existsSync(path.join(DATOS, f)) ? JSON.parse(fs.readFileSync(path.join(DATOS, f), 'utf8')) : [];
 // USDA + recetas calculadas + alimentos investigados en otras fuentes (estos dos ya traen porciones_es)
 const lista = [...leer('alimentos-usda.json'), ...leer('recetas-calculadas.json'), ...leer('alimentos-investigados.json')];
@@ -13,13 +13,9 @@ const sinTildes = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const redondear = o => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, typeof v === 'number' ? Math.round(v * 100) / 100 : v]));
 
 
-const ajustes = JSON.parse(fs.readFileSync(path.join(DATOS, 'porciones-ajustes.json'), 'utf8'));
-const conAjuste = (id, lista) => ajustes[id] ? [ajustes[id], ...lista.filter(p => p.texto !== ajustes[id].texto)] : lista;
 const filas = lista.map(a => {
-  const porciones = conAjuste(a.id, a.porciones_es || porcionesEs(a.porciones));
-  // Grasas: la porción casera es la cucharada, nunca la taza
-  const cucharada = a.categoria === 'grasas' && porciones.find(p => /^1 cucharada$/.test(p.texto));
-  const base = ajustes[a.id] || cucharada || porcionBase(porciones);
+  const porciones = porcionesDe(a);
+  const base = baseDe(a);
   return `(${[
   q(a.id), q(a.nombre), `array[${a.sinonimos.map(q).join(',')}]::text[]`, q(a.categoria), q(a.fuente),
   q(JSON.stringify(redondear(a.por_100g))) + '::jsonb', q(JSON.stringify(porciones)) + '::jsonb',

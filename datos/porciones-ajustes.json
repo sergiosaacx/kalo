@@ -131,5 +131,61 @@
   "linaza": {
     "texto": "1 cucharada",
     "gramos": 10
+  },
+  "macadamia": {
+    "texto": "1 puñado",
+    "gramos": 28
+  },
+  "nuez-brasil": {
+    "texto": "1 puñado",
+    "gramos": 28
+  },
+  "pistacho": {
+    "texto": "1 puñado",
+    "gramos": 28
+  },
+  "avellana": {
+    "texto": "1 puñado",
+    "gramos": 28
+  },
+  "semillas-girasol": {
+    "texto": "1 cucharada",
+    "gramos": 9
+  },
+  "semillas-calabaza": {
+    "texto": "1 cucharada",
+    "gramos": 9
+  },
+  "ajonjoli": {
+    "texto": "1 cucharada",
+    "gramos": 9
+  },
+  "mantequilla-mani": {
+    "texto": "1 cucharada",
+    "gramos": 16
+  },
+  "tahini": {
+    "texto": "1 cucharada",
+    "gramos": 15
+  },
+  "salchicha": {
+    "texto": "1 unidad",
+    "gramos": 45
+  },
+  "pavo": {
+    "texto": "1 porción",
+    "gramos": 100
+  },
+  "chocolate-mesa": {
+    "texto": "1 pastilla",
+    "gramos": 25
+  },
+  "chocolate-negro": {
+    "texto": "2 cuadritos",
+    "gramos": 20
+  },
+  "coco-rallado": {
+    "texto": "1 cucharada",
+    "gramos": 6
   }
 }
