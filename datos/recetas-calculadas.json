@@ -1,0 +1,1056 @@
+[
+ {
+  "id": "yuca",
+  "nombre": "Yuca cocida",
+  "sinonimos": [
+   "mandioca"
+  ],
+  "categoria": "carbohidratos",
+  "fuente": "Receta Kalo · Yuca cruda 100 g → rinde 143 g",
+  "por_100g": {
+   "vit_a_ug": 0.7,
+   "carbos_g": 26.62,
+   "kcal": 111.89,
+   "colesterol_mg": 0,
+   "b12_ug": 0,
+   "vit_d_ug": 0,
+   "vit_c_mg": 14.41,
+   "b1_mg": 0.06,
+   "b2_mg": 0.03,
+   "folato_ug": 18.88,
+   "proteina_g": 0.95,
+   "fibra_g": 1.26,
+   "hierro_mg": 0.19,
+   "magnesio_mg": 14.69,
+   "fosforo_mg": 18.88,
+   "sodio_mg": 9.79,
+   "cobre_mg": 0.07,
+   "manganeso_mg": 0.27,
+   "grasa_sat_g": 0.05,
+   "grasa_g": 0.2,
+   "b3_mg": 0.6,
+   "b6_mg": 0.06,
+   "calcio_mg": 11.19,
+   "potasio_mg": 189.51,
+   "zinc_mg": 0.24,
+   "selenio_ug": 0.49,
+   "vit_e_mg": 0.13,
+   "azucar_g": 1.19,
+   "vit_k_ug": 1.33
+  },
+  "porciones_es": [
+   {
+    "texto": "1 trozo mediano",
+    "gramos": 120
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "yuca-frita",
+  "nombre": "Yuca frita",
+  "sinonimos": [],
+  "categoria": "carbohidratos",
+  "fuente": "Receta Kalo · Yuca cruda 100 g, Aceite de girasol 10 g → rinde 100 g",
+  "por_100g": {
+   "vit_a_ug": 1,
+   "carbos_g": 38.06,
+   "kcal": 248.4,
+   "colesterol_mg": 0,
+   "b12_ug": 0,
+   "vit_d_ug": 0,
+   "vit_c_mg": 20.6,
+   "b1_mg": 0.09,
+   "b2_mg": 0.05,
+   "folato_ug": 27,
+   "proteina_g": 1.36,
+   "fibra_g": 1.8,
+   "hierro_mg": 0.27,
+   "magnesio_mg": 21,
+   "fosforo_mg": 27,
+   "sodio_mg": 14,
+   "cobre_mg": 0.1,
+   "manganeso_mg": 0.38,
+   "grasa_sat_g": 1.1,
+   "grasa_g": 10.28,
+   "b3_mg": 0.85,
+   "b6_mg": 0.09,
+   "calcio_mg": 16,
+   "potasio_mg": 271,
+   "zinc_mg": 0.34,
+   "selenio_ug": 0.7,
+   "vit_e_mg": 4.3,
+   "azucar_g": 1.7,
+   "vit_k_ug": 2.44
+  },
+  "porciones_es": [
+   {
+    "texto": "1 porción",
+    "gramos": 120
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "almojabana",
+  "nombre": "Almojábana",
+  "sinonimos": [],
+  "categoria": "carbohidratos",
+  "fuente": "Receta Kalo · Cuajada 250 g, Queso campesino 125 g, Harina de maíz precocida 100 g, Huevo entero 50 g, Mantequilla 15 g, Azúcar blanca 10 g → rinde 485 g",
+  "por_100g": {
+   "vit_k_ug": 0.93,
+   "vit_e_mg": 0.4,
+   "azucar_g": 2.99,
+   "vit_a_ug": 150.54,
+   "vit_d_ug": 0.95,
+   "sodio_mg": 286.35,
+   "cobre_mg": 0.07,
+   "manganeso_mg": 0.11,
+   "fibra_g": 1.51,
+   "hierro_mg": 1.17,
+   "magnesio_mg": 41.4,
+   "fosforo_mg": 264.4,
+   "proteina_g": 13.53,
+   "colesterol_mg": 78.76,
+   "grasa_sat_g": 7.89,
+   "vit_c_mg": 0,
+   "b1_mg": 0.11,
+   "b2_mg": 0.23,
+   "folato_ug": 18.6,
+   "b12_ug": 0.68,
+   "grasa_g": 14.45,
+   "carbos_g": 21.41,
+   "kcal": 267.73,
+   "b3_mg": 0.81,
+   "b6_mg": 0.11,
+   "calcio_mg": 293.86,
+   "potasio_mg": 171.87,
+   "zinc_mg": 1.87,
+   "selenio_ug": 19.99
+  },
+  "porciones_es": [
+   {
+    "texto": "1 unidad",
+    "gramos": 60
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "pandebono",
+  "nombre": "Pandebono",
+  "sinonimos": [],
+  "categoria": "carbohidratos",
+  "fuente": "Receta Kalo · Almidón de yuca 125 g, Harina de maíz precocida 30 g, Queso costeño 250 g, Huevo entero 50 g, Azúcar blanca 10 g → rinde 410 g",
+  "por_100g": {
+   "selenio_ug": 13.31,
+   "carbos_g": 36.31,
+   "proteina_g": 14.83,
+   "magnesio_mg": 38.67,
+   "b1_mg": 0.08,
+   "manganeso_mg": 0.17,
+   "b6_mg": 0.11,
+   "hierro_mg": 1.79,
+   "potasio_mg": 174.95,
+   "b2_mg": 0.23,
+   "sodio_mg": 453.16,
+   "b3_mg": 0.48,
+   "fibra_g": 2.01,
+   "calcio_mg": 450.75,
+   "cobre_mg": 0.06,
+   "zinc_mg": 2.28,
+   "grasa_g": 16.4,
+   "fosforo_mg": 338.5,
+   "kcal": 351.34,
+   "azucar_g": 3.6,
+   "vit_e_mg": 0.45,
+   "vit_k_ug": 1.03,
+   "folato_ug": 7.56,
+   "b12_ug": 1.18,
+   "vit_c_mg": 0,
+   "colesterol_mg": 88.05,
+   "grasa_sat_g": 8.75,
+   "vit_d_ug": 0.67,
+   "vit_a_ug": 115.24
+  },
+  "porciones_es": [
+   {
+    "texto": "1 unidad",
+    "gramos": 50
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "pan-yuca",
+  "nombre": "Pan de yuca",
+  "sinonimos": [],
+  "categoria": "carbohidratos",
+  "fuente": "Receta Kalo · Almidón de yuca 200 g, Queso costeño 200 g, Huevo entero 50 g, Mantequilla 20 g → rinde 420 g",
+  "por_100g": {
+   "selenio_ug": 10.27,
+   "carbos_g": 42.87,
+   "proteina_g": 11.68,
+   "magnesio_mg": 31.31,
+   "b1_mg": 0.05,
+   "manganeso_mg": 0.2,
+   "b6_mg": 0.09,
+   "hierro_mg": 2.19,
+   "potasio_mg": 171.67,
+   "b2_mg": 0.2,
+   "sodio_mg": 388.99,
+   "b3_mg": 0.31,
+   "fibra_g": 2.3,
+   "calcio_mg": 371.88,
+   "cobre_mg": 0.06,
+   "zinc_mg": 1.81,
+   "grasa_g": 16.81,
+   "fosforo_mg": 265.78,
+   "kcal": 368.96,
+   "colesterol_mg": 87.86,
+   "grasa_sat_g": 9.32,
+   "vit_a_ug": 126.38,
+   "vit_d_ug": 0.57,
+   "b12_ug": 0.95,
+   "vit_k_ug": 1.13,
+   "azucar_g": 0.89,
+   "vit_e_mg": 0.46,
+   "folato_ug": 5.74,
+   "vit_c_mg": 0
+  },
+  "porciones_es": [
+   {
+    "texto": "1 unidad",
+    "gramos": 45
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "bunuelo",
+  "nombre": "Buñuelo",
+  "sinonimos": [],
+  "categoria": "carbohidratos",
+  "fuente": "Receta Kalo · Queso costeño 150 g, Almidón de yuca 60 g, Harina de maíz precocida 30 g, Huevo entero 50 g, Azúcar blanca 10 g, Aceite de girasol 35 g → rinde 320 g",
+  "por_100g": {
+   "colesterol_mg": 90.94,
+   "grasa_sat_g": 8.07,
+   "proteina_g": 12.45,
+   "hierro_mg": 1.43,
+   "magnesio_mg": 33.67,
+   "fosforo_mg": 279.79,
+   "sodio_mg": 357.95,
+   "cobre_mg": 0.06,
+   "manganeso_mg": 0.14,
+   "vit_a_ug": 98.59,
+   "vit_d_ug": 0.64,
+   "b1_mg": 0.07,
+   "b2_mg": 0.21,
+   "b12_ug": 0.96,
+   "vit_k_ug": 1.42,
+   "grasa_g": 24.25,
+   "carbos_g": 28,
+   "kcal": 377.38,
+   "azucar_g": 4.06,
+   "calcio_mg": 346.76,
+   "potasio_mg": 144.64,
+   "zinc_mg": 1.88,
+   "selenio_ug": 12.74,
+   "vit_e_mg": 4.92,
+   "b3_mg": 0.48,
+   "b6_mg": 0.1,
+   "fibra_g": 1.59,
+   "folato_ug": 9.69,
+   "vit_c_mg": 0
+  },
+  "porciones_es": [
+   {
+    "texto": "1 unidad",
+    "gramos": 45
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "arepa-huevo",
+  "nombre": "Arepa de huevo",
+  "sinonimos": [],
+  "categoria": "carbohidratos",
+  "fuente": "Receta Kalo · Arepa de maíz blanco 90 g, Huevo entero 50 g, Aceite de girasol 12 g → rinde 145 g",
+  "por_100g": {
+   "grasa_g": 14.89,
+   "carbos_g": 23.3,
+   "kcal": 258.4,
+   "azucar_g": 0.67,
+   "calcio_mg": 74.55,
+   "potasio_mg": 102.21,
+   "zinc_mg": 0.94,
+   "selenio_ug": 14.37,
+   "vit_e_mg": 3.94,
+   "b3_mg": 0.58,
+   "b6_mg": 0.13,
+   "proteina_g": 7.73,
+   "fibra_g": 1.61,
+   "hierro_mg": 1.25,
+   "magnesio_mg": 20.9,
+   "fosforo_mg": 140.9,
+   "sodio_mg": 216.55,
+   "cobre_mg": 0.04,
+   "manganeso_mg": 0.08,
+   "vit_a_ug": 93.03,
+   "b1_mg": 0.06,
+   "b2_mg": 0.18,
+   "b12_ug": 0.31,
+   "vit_k_ug": 2.72,
+   "colesterol_mg": 131.38,
+   "grasa_sat_g": 3.73,
+   "vit_d_ug": 0.69,
+   "folato_ug": 16.21,
+   "vit_c_mg": 0
+  },
+  "porciones_es": [
+   {
+    "texto": "1 unidad",
+    "gramos": 145
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "envuelto",
+  "nombre": "Envuelto de mazorca",
+  "sinonimos": [
+   "bollo"
+  ],
+  "categoria": "carbohidratos",
+  "fuente": "Receta Kalo · Mazorca 200 g, Queso campesino 30 g, Azúcar blanca 15 g, Mantequilla 10 g → rinde 230 g",
+  "por_100g": {
+   "b1_mg": 0.14,
+   "b2_mg": 0.07,
+   "folato_ug": 37.57,
+   "fibra_g": 1.74,
+   "hierro_mg": 0.48,
+   "magnesio_mg": 35.39,
+   "fosforo_mg": 128.65,
+   "sodio_mg": 139.02,
+   "cobre_mg": 0.05,
+   "manganeso_mg": 0.14,
+   "proteina_g": 5.24,
+   "grasa_g": 7.81,
+   "b3_mg": 1.54,
+   "azucar_g": 12.26,
+   "calcio_mg": 76.67,
+   "potasio_mg": 252.78,
+   "zinc_mg": 0.74,
+   "b6_mg": 0.09,
+   "grasa_sat_g": 4.2,
+   "vit_k_ug": 0.7,
+   "vit_a_ug": 66.78,
+   "carbos_g": 23.17,
+   "kcal": 170.2,
+   "vit_e_mg": 0.21,
+   "vit_c_mg": 5.91,
+   "b12_ug": 0.23,
+   "colesterol_mg": 18.35,
+   "vit_d_ug": 0.35,
+   "selenio_ug": 3.12
+  },
+  "porciones_es": [
+   {
+    "texto": "1 unidad",
+    "gramos": 115
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "bollo-yuca",
+  "nombre": "Bollo de yuca",
+  "sinonimos": [],
+  "categoria": "carbohidratos",
+  "fuente": "Receta Kalo · Yuca cruda 100 g → rinde 105 g",
+  "por_100g": {
+   "vit_a_ug": 0.95,
+   "carbos_g": 36.25,
+   "kcal": 152.38,
+   "colesterol_mg": 0,
+   "b12_ug": 0,
+   "vit_d_ug": 0,
+   "vit_c_mg": 19.62,
+   "b1_mg": 0.08,
+   "b2_mg": 0.05,
+   "folato_ug": 25.71,
+   "proteina_g": 1.3,
+   "fibra_g": 1.71,
+   "hierro_mg": 0.26,
+   "magnesio_mg": 20,
+   "fosforo_mg": 25.71,
+   "sodio_mg": 13.33,
+   "cobre_mg": 0.1,
+   "manganeso_mg": 0.37,
+   "grasa_sat_g": 0.07,
+   "grasa_g": 0.27,
+   "b3_mg": 0.81,
+   "b6_mg": 0.08,
+   "calcio_mg": 15.24,
+   "potasio_mg": 258.1,
+   "zinc_mg": 0.32,
+   "selenio_ug": 0.67,
+   "vit_e_mg": 0.18,
+   "azucar_g": 1.62,
+   "vit_k_ug": 1.81
+  },
+  "porciones_es": [
+   {
+    "texto": "1 unidad",
+    "gramos": 150
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "casabe",
+  "nombre": "Casabe",
+  "sinonimos": [],
+  "categoria": "carbohidratos",
+  "fuente": "Receta Kalo · Almidón de yuca 100 g → rinde 100 g",
+  "por_100g": {
+   "selenio_ug": 0,
+   "carbos_g": 87.31,
+   "proteina_g": 0.92,
+   "magnesio_mg": 33.56,
+   "b1_mg": 0.05,
+   "manganeso_mg": 0.4,
+   "b6_mg": 0.05,
+   "hierro_mg": 3.99,
+   "potasio_mg": 197.6,
+   "b2_mg": 0.07,
+   "sodio_mg": 13.08,
+   "b3_mg": 0.6,
+   "fibra_g": 4.83,
+   "calcio_mg": 74.55,
+   "cobre_mg": 0.08,
+   "zinc_mg": 0.41,
+   "grasa_g": 0.49,
+   "fosforo_mg": 39.24,
+   "kcal": 357.37
+  },
+  "porciones_es": [
+   {
+    "texto": "1 tajada",
+    "gramos": 30
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "mote",
+  "nombre": "Mote de queso",
+  "sinonimos": [],
+  "categoria": "carbohidratos",
+  "fuente": "Receta Kalo · Ñame 200 g, Queso costeño 60 g, Cebolla cabezona blanca 20 g, Ajo 3 g, Aceite de girasol 10 g, Agua 400 g → rinde 600 g",
+  "por_100g": {
+   "azucar_g": 0.49,
+   "vit_k_ug": 1.04,
+   "vit_a_ug": 17.7,
+   "carbos_g": 9.89,
+   "kcal": 86.48,
+   "vit_e_mg": 0.85,
+   "proteina_g": 2.6,
+   "vit_c_mg": 4.44,
+   "b1_mg": 0.04,
+   "b2_mg": 0.03,
+   "folato_ug": 5.98,
+   "b12_ug": 0.18,
+   "fibra_g": 1.37,
+   "hierro_mg": 0.21,
+   "magnesio_mg": 10.02,
+   "fosforo_mg": 64.77,
+   "sodio_mg": 75.95,
+   "cobre_mg": 0.06,
+   "manganeso_mg": 0.14,
+   "colesterol_mg": 7,
+   "grasa_sat_g": 1.55,
+   "b3_mg": 0.19,
+   "b6_mg": 0.09,
+   "grasa_g": 4.15,
+   "calcio_mg": 77.34,
+   "potasio_mg": 242.8,
+   "zinc_mg": 0.39,
+   "vit_d_ug": 0.07,
+   "selenio_ug": 1.7
+  },
+  "porciones_es": [
+   {
+    "texto": "1 plato",
+    "gramos": 350
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "guacamole",
+  "nombre": "Guacamole",
+  "sinonimos": [],
+  "categoria": "grasas",
+  "fuente": "Receta Kalo · Aguacate Hass 200 g, Tomate 40 g, Cebolla morada 20 g, Limón 10 g, Cilantro 3 g → rinde 273 g",
+  "por_100g": {
+   "grasa_g": 11.34,
+   "azucar_g": 0.68,
+   "calcio_mg": 14.18,
+   "potasio_mg": 430.05,
+   "zinc_mg": 0.55,
+   "selenio_ug": 0.35,
+   "vit_e_mg": 1.56,
+   "b3_mg": 1.51,
+   "b6_mg": 0.23,
+   "proteina_g": 1.68,
+   "fibra_g": 5.45,
+   "hierro_mg": 0.55,
+   "magnesio_mg": 24.2,
+   "fosforo_mg": 47.27,
+   "sodio_mg": 7.25,
+   "cobre_mg": 0.14,
+   "manganeso_mg": 0.14,
+   "vit_c_mg": 10.41,
+   "b1_mg": 0.06,
+   "b2_mg": 0.11,
+   "vit_a_ug": 15.06,
+   "vit_k_ug": 19.97,
+   "folato_ug": 68.37,
+   "b12_ug": 0,
+   "colesterol_mg": 0,
+   "carbos_g": 8.05,
+   "kcal": 129.56,
+   "grasa_sat_g": 1.56,
+   "vit_d_ug": 0
+  },
+  "porciones_es": [
+   {
+    "texto": "2 cucharadas",
+    "gramos": 30
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "hogao",
+  "nombre": "Hogao",
+  "sinonimos": [],
+  "categoria": "grasas",
+  "fuente": "Receta Kalo · Tomate 200 g, Cebolla larga 60 g, Aceite de girasol 15 g → rinde 220 g",
+  "por_100g": {
+   "vit_c_mg": 17.58,
+   "colesterol_mg": 0,
+   "b12_ug": 0,
+   "azucar_g": 3.03,
+   "carbos_g": 5.54,
+   "kcal": 85.36,
+   "vit_a_ug": 51.82,
+   "grasa_sat_g": 0.74,
+   "calcio_mg": 28.73,
+   "potasio_mg": 290.73,
+   "zinc_mg": 0.26,
+   "selenio_ug": 0.16,
+   "vit_e_mg": 3.44,
+   "b3_mg": 0.68,
+   "b6_mg": 0.09,
+   "grasa_g": 7.05,
+   "vit_k_ug": 64,
+   "fibra_g": 1.8,
+   "hierro_mg": 0.65,
+   "magnesio_mg": 15.45,
+   "fosforo_mg": 31.91,
+   "sodio_mg": 8.91,
+   "cobre_mg": 0.08,
+   "manganeso_mg": 0.15,
+   "proteina_g": 1.3,
+   "b1_mg": 0.05,
+   "b2_mg": 0.04,
+   "folato_ug": 31.09,
+   "vit_d_ug": 0
+  },
+  "porciones_es": [
+   {
+    "texto": "2 cucharadas",
+    "gramos": 30
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "aguapanela",
+  "nombre": "Aguapanela",
+  "sinonimos": [
+   "agua de panela"
+  ],
+  "categoria": "bebidas",
+  "fuente": "Receta Kalo · Panela 30 g, Agua 250 g → rinde 280 g",
+  "por_100g": {
+   "vit_e_mg": 0,
+   "vit_k_ug": 0,
+   "vit_d_ug": 0,
+   "grasa_g": 0,
+   "carbos_g": 10.51,
+   "kcal": 40.71,
+   "azucar_g": 10.4,
+   "calcio_mg": 11.57,
+   "potasio_mg": 14.25,
+   "zinc_mg": 0.01,
+   "selenio_ug": 0.13,
+   "b3_mg": 0.01,
+   "b6_mg": 0,
+   "colesterol_mg": 0,
+   "grasa_sat_g": 0,
+   "vit_a_ug": 0,
+   "vit_c_mg": 0,
+   "b1_mg": 0,
+   "b2_mg": 0,
+   "folato_ug": 0.11,
+   "b12_ug": 0,
+   "proteina_g": 0.01,
+   "fibra_g": 0,
+   "hierro_mg": 0.08,
+   "magnesio_mg": 1.86,
+   "fosforo_mg": 0.43,
+   "sodio_mg": 6.57,
+   "cobre_mg": 0.01,
+   "manganeso_mg": 0.01
+  },
+  "porciones_es": [
+   {
+    "texto": "1 vaso",
+    "gramos": 250
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "jugo-mora-agua",
+  "nombre": "Jugo de mora en agua",
+  "sinonimos": [],
+  "categoria": "bebidas",
+  "fuente": "Receta Kalo · Pulpa de mora 60 g, Azúcar blanca 15 g, Agua 200 g → rinde 275 g",
+  "por_100g": {
+   "grasa_sat_g": 0,
+   "vit_k_ug": 4.32,
+   "azucar_g": 7.77,
+   "selenio_ug": 0.12,
+   "vit_e_mg": 0.26,
+   "calcio_mg": 8.56,
+   "potasio_mg": 30.65,
+   "zinc_mg": 0.06,
+   "grasa_g": 0.09,
+   "carbos_g": 8.87,
+   "kcal": 35.07,
+   "b3_mg": 0.26,
+   "b6_mg": 0.01,
+   "proteina_g": 0.26,
+   "colesterol_mg": 0,
+   "vit_c_mg": 0.68,
+   "b1_mg": 0.01,
+   "b2_mg": 0.01,
+   "folato_ug": 7.42,
+   "b12_ug": 0,
+   "fibra_g": 1.09,
+   "hierro_mg": 0.18,
+   "magnesio_mg": 5.53,
+   "fosforo_mg": 6.55,
+   "sodio_mg": 3.18,
+   "cobre_mg": 0.03,
+   "manganeso_mg": 0.27,
+   "vit_d_ug": 0,
+   "vit_a_ug": 1.31
+  },
+  "porciones_es": [
+   {
+    "texto": "1 vaso",
+    "gramos": 250
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "jugo-lulo-agua",
+  "nombre": "Jugo de lulo en agua",
+  "sinonimos": [],
+  "categoria": "bebidas",
+  "fuente": "Receta Kalo · Pulpa de lulo 70 g, Azúcar blanca 15 g, Agua 200 g → rinde 285 g",
+  "por_100g": {
+   "grasa_g": 0.05,
+   "carbos_g": 6.71,
+   "kcal": 26.51,
+   "azucar_g": 6.17,
+   "calcio_mg": 4.12,
+   "potasio_mg": 49.23,
+   "zinc_mg": 0.03,
+   "selenio_ug": 0.13,
+   "vit_e_mg": 0.18,
+   "b3_mg": 0.36,
+   "b6_mg": 0.03,
+   "proteina_g": 0.11,
+   "fibra_g": 0.27,
+   "hierro_mg": 0.09,
+   "magnesio_mg": 3.4,
+   "fosforo_mg": 2.95,
+   "sodio_mg": 3.84,
+   "cobre_mg": 0.01,
+   "manganeso_mg": 0.02,
+   "vit_a_ug": 6.88,
+   "vit_c_mg": 0.79,
+   "b1_mg": 0.01,
+   "b2_mg": 0,
+   "folato_ug": 0.74,
+   "vit_k_ug": 3.59,
+   "grasa_sat_g": 0,
+   "colesterol_mg": 0,
+   "b12_ug": 0,
+   "vit_d_ug": 0
+  },
+  "porciones_es": [
+   {
+    "texto": "1 vaso",
+    "gramos": 250
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "jugo-maracuya-agua",
+  "nombre": "Jugo de maracuyá en agua",
+  "sinonimos": [],
+  "categoria": "bebidas",
+  "fuente": "Receta Kalo · Pulpa de maracuyá 50 g, Azúcar blanca 15 g, Agua 200 g → rinde 265 g",
+  "por_100g": {
+   "grasa_sat_g": 0,
+   "azucar_g": 8.18,
+   "vit_e_mg": 0,
+   "vit_k_ug": 0.08,
+   "vit_a_ug": 6.79,
+   "zinc_mg": 0.02,
+   "b6_mg": 0.01,
+   "cobre_mg": 0.02,
+   "folato_ug": 1.32,
+   "fibra_g": 0.04,
+   "hierro_mg": 0.05,
+   "magnesio_mg": 3.96,
+   "fosforo_mg": 2.45,
+   "sodio_mg": 4.21,
+   "b12_ug": 0,
+   "vit_c_mg": 5.62,
+   "b1_mg": 0,
+   "b2_mg": 0.03,
+   "proteina_g": 0.07,
+   "colesterol_mg": 0,
+   "b3_mg": 0.28,
+   "calcio_mg": 3.08,
+   "potasio_mg": 52.57,
+   "grasa_g": 0.01,
+   "carbos_g": 8.23,
+   "kcal": 31.53,
+   "vit_d_ug": 0,
+   "selenio_ug": 0.05,
+   "manganeso_mg": 0
+  },
+  "porciones_es": [
+   {
+    "texto": "1 vaso",
+    "gramos": 250
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "limonada-coco",
+  "nombre": "Limonada de coco",
+  "sinonimos": [],
+  "categoria": "bebidas",
+  "fuente": "Receta Kalo · Leche de coco 60 g, Limón 30 g, Azúcar blanca 20 g, Agua 120 g → rinde 230 g",
+  "por_100g": {
+   "vit_a_ug": 0.26,
+   "vit_d_ug": 0,
+   "b3_mg": 0.19,
+   "b6_mg": 0.01,
+   "calcio_mg": 10.65,
+   "potasio_mg": 70.87,
+   "zinc_mg": 0.17,
+   "grasa_g": 5.59,
+   "carbos_g": 10.8,
+   "kcal": 88.96,
+   "proteina_g": 0.62,
+   "hierro_mg": 0.94,
+   "magnesio_mg": 13.3,
+   "fosforo_mg": 27.39,
+   "sodio_mg": 5.83,
+   "cobre_mg": 0.07,
+   "manganeso_mg": 0.2,
+   "vit_c_mg": 4.06,
+   "b1_mg": 0.01,
+   "b2_mg": 0,
+   "folato_ug": 4.7,
+   "b12_ug": 0,
+   "colesterol_mg": 0,
+   "grasa_sat_g": 4.94,
+   "azucar_g": 8.9,
+   "selenio_ug": 0.1,
+   "vit_e_mg": 0.03,
+   "vit_k_ug": 0.08,
+   "fibra_g": 0.37
+  },
+  "porciones_es": [
+   {
+    "texto": "1 vaso",
+    "gramos": 250
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "avena-bebida",
+  "nombre": "Avena colombiana",
+  "sinonimos": [
+   "avena en leche"
+  ],
+  "categoria": "bebidas",
+  "fuente": "Receta Kalo · Leche entera 200 g, Avena en hojuelas 30 g, Azúcar blanca 15 g → rinde 245 g",
+  "por_100g": {
+   "vit_a_ug": 37.55,
+   "colesterol_mg": 8.16,
+   "selenio_ug": 6.6,
+   "grasa_g": 3.45,
+   "azucar_g": 10.35,
+   "carbos_g": 18.33,
+   "kcal": 119.9,
+   "grasa_sat_g": 1.66,
+   "vit_d_ug": 1.06,
+   "folato_ug": 8,
+   "fibra_g": 1.24,
+   "hierro_mg": 0.55,
+   "magnesio_mg": 25.06,
+   "fosforo_mg": 118.78,
+   "sodio_mg": 35.9,
+   "cobre_mg": 0.07,
+   "manganeso_mg": 0.45,
+   "proteina_g": 4.18,
+   "vit_c_mg": 0,
+   "b1_mg": 0.09,
+   "b2_mg": 0.16,
+   "b12_ug": 0.37,
+   "vit_k_ug": 0.49,
+   "b3_mg": 0.21,
+   "b6_mg": 0.04,
+   "calcio_mg": 98.67,
+   "potasio_mg": 152.2,
+   "zinc_mg": 0.75,
+   "vit_e_mg": 0.11
+  },
+  "porciones_es": [
+   {
+    "texto": "1 vaso",
+    "gramos": 250
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "batido-banano",
+  "nombre": "Batido de banano con leche",
+  "sinonimos": [],
+  "categoria": "bebidas",
+  "fuente": "Receta Kalo · Leche entera 200 g, Banano 118 g, Azúcar blanca 5 g → rinde 323 g",
+  "por_100g": {
+   "vit_a_ug": 29.58,
+   "colesterol_mg": 6.19,
+   "selenio_ug": 2.67,
+   "grasa_g": 2.13,
+   "azucar_g": 9.14,
+   "carbos_g": 12.86,
+   "kcal": 76.28,
+   "grasa_sat_g": 1.2,
+   "vit_d_ug": 0.8,
+   "folato_ug": 10.4,
+   "fibra_g": 0.95,
+   "hierro_mg": 0.11,
+   "magnesio_mg": 16.06,
+   "fosforo_mg": 60.05,
+   "sodio_mg": 27.01,
+   "cobre_mg": 0.04,
+   "manganeso_mg": 0.1,
+   "proteina_g": 2.35,
+   "vit_c_mg": 3.18,
+   "b1_mg": 0.04,
+   "b2_mg": 0.13,
+   "b12_ug": 0.28,
+   "vit_k_ug": 0.37,
+   "b3_mg": 0.3,
+   "b6_mg": 0.16,
+   "calcio_mg": 71.81,
+   "potasio_mg": 212.55,
+   "zinc_mg": 0.28,
+   "vit_e_mg": 0.08
+  },
+  "porciones_es": [
+   {
+    "texto": "1 vaso",
+    "gramos": 300
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "colada",
+  "nombre": "Colada de maizena",
+  "sinonimos": [],
+  "categoria": "bebidas",
+  "fuente": "Receta Kalo · Leche entera 200 g, Fécula de maíz 20 g, Azúcar blanca 15 g → rinde 235 g",
+  "por_100g": {
+   "vit_a_ug": 39.15,
+   "colesterol_mg": 8.51,
+   "selenio_ug": 3.43,
+   "grasa_g": 2.77,
+   "azucar_g": 10.67,
+   "carbos_g": 18.23,
+   "kcal": 109.04,
+   "grasa_sat_g": 1.59,
+   "vit_d_ug": 1.11,
+   "folato_ug": 4.26,
+   "fibra_g": 0.08,
+   "hierro_mg": 0.07,
+   "magnesio_mg": 8.77,
+   "fosforo_mg": 72.6,
+   "sodio_mg": 37.43,
+   "cobre_mg": 0.03,
+   "manganeso_mg": 0.01,
+   "proteina_g": 2.7,
+   "vit_c_mg": 0,
+   "b1_mg": 0.04,
+   "b2_mg": 0.15,
+   "b12_ug": 0.38,
+   "vit_k_ug": 0.26,
+   "b3_mg": 0.08,
+   "b6_mg": 0.03,
+   "calcio_mg": 96.4,
+   "potasio_mg": 112.72,
+   "zinc_mg": 0.32,
+   "vit_e_mg": 0.06
+  },
+  "porciones_es": [
+   {
+    "texto": "1 taza",
+    "gramos": 235
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ },
+ {
+  "id": "gaseosa-cero",
+  "nombre": "Gaseosa sin azúcar",
+  "sinonimos": [],
+  "categoria": "bebidas",
+  "fuente": "Receta Kalo · Agua 100 g → rinde 100 g",
+  "por_100g": {
+   "vit_d_ug": 0,
+   "grasa_g": 0,
+   "carbos_g": 0,
+   "kcal": 0,
+   "calcio_mg": 3,
+   "potasio_mg": 0,
+   "zinc_mg": 0.01,
+   "proteina_g": 0,
+   "fibra_g": 0,
+   "hierro_mg": 0,
+   "magnesio_mg": 1,
+   "fosforo_mg": 0,
+   "sodio_mg": 10,
+   "cobre_mg": 0.01,
+   "manganeso_mg": 0,
+   "azucar_g": 0,
+   "vit_a_ug": 0,
+   "grasa_sat_g": 0,
+   "vit_c_mg": 0,
+   "b1_mg": 0,
+   "b2_mg": 0,
+   "folato_ug": 0,
+   "b12_ug": 0,
+   "vit_k_ug": 0,
+   "colesterol_mg": 0,
+   "b3_mg": 0,
+   "b6_mg": 0,
+   "selenio_ug": 0,
+   "vit_e_mg": 0
+  },
+  "porciones_es": [
+   {
+    "texto": "1 lata",
+    "gramos": 355
+   },
+   {
+    "texto": "100 g",
+    "gramos": 100
+   }
+  ]
+ }
+]

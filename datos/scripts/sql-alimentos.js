@@ -4,14 +4,16 @@ const fs = require('fs');
 const path = require('path');
 const DATOS = path.join(__dirname, '..');
 const { porcionesEs, porcionBase } = require('./porciones-es');
-const lista = JSON.parse(fs.readFileSync(path.join(DATOS, 'alimentos-usda.json'), 'utf8'));
+const leer = f => fs.existsSync(path.join(DATOS, f)) ? JSON.parse(fs.readFileSync(path.join(DATOS, f), 'utf8')) : [];
+// USDA + recetas calculadas + alimentos investigados en otras fuentes (estos dos ya traen porciones_es)
+const lista = [...leer('alimentos-usda.json'), ...leer('recetas-calculadas.json'), ...leer('alimentos-investigados.json')];
 
 const q = s => `'${String(s).replace(/'/g, "''")}'`;
 const sinTildes = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const redondear = o => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, typeof v === 'number' ? Math.round(v * 100) / 100 : v]));
 
 
-const filas = lista.map(a => { const porciones = porcionesEs(a.porciones); return `(${[
+const filas = lista.map(a => { const porciones = a.porciones_es || porcionesEs(a.porciones); return `(${[
   q(a.id), q(a.nombre), `array[${a.sinonimos.map(q).join(',')}]::text[]`, q(a.categoria), q(a.fuente),
   q(JSON.stringify(redondear(a.por_100g))) + '::jsonb', q(JSON.stringify(porciones)) + '::jsonb',
   q(JSON.stringify(porcionBase(porciones))) + '::jsonb', q(sinTildes([a.nombre, ...a.sinonimos].join(' '))),

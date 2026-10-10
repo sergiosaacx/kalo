@@ -17833,5 +17833,85 @@
     "gramos": 1000
    }
   ]
+ },
+ {
+  "id": "almidon-yuca",
+  "nombre": "Almidón de yuca",
+  "sinonimos": [
+   "harina de yuca",
+   "almidón agrio"
+  ],
+  "categoria": "carbohidratos",
+  "fuente": "USDA foundation · 2512377",
+  "usda": "Flour, cassava",
+  "por_100g": {
+   "selenio_ug": 0,
+   "carbos_g": 87.312975,
+   "proteina_g": 0.918225,
+   "magnesio_mg": 33.56,
+   "b1_mg": 0.05125,
+   "manganeso_mg": 0.3954,
+   "b6_mg": 0.04988,
+   "hierro_mg": 3.988,
+   "potasio_mg": 197.6,
+   "b2_mg": 0.0675,
+   "sodio_mg": 13.08,
+   "b3_mg": 0.6,
+   "fibra_g": 4.834,
+   "calcio_mg": 74.55,
+   "cobre_mg": 0.07663,
+   "zinc_mg": 0.4099,
+   "grasa_g": 0.4938,
+   "fosforo_mg": 39.24,
+   "kcal": 357.369
+  },
+  "porciones": []
+ },
+ {
+  "id": "fecula-maiz",
+  "nombre": "Fécula de maíz",
+  "sinonimos": [
+   "maizena"
+  ],
+  "categoria": "carbohidratos",
+  "fuente": "USDA sr_legacy · 169698",
+  "usda": "Cornstarch",
+  "por_100g": {
+   "vit_a_ug": 0,
+   "vit_k_ug": 0,
+   "azucar_g": 0,
+   "vit_e_mg": 0,
+   "grasa_g": 0.05,
+   "carbos_g": 91.27,
+   "kcal": 381,
+   "calcio_mg": 2,
+   "potasio_mg": 3,
+   "zinc_mg": 0.06,
+   "b3_mg": 0,
+   "b6_mg": 0,
+   "proteina_g": 0.26,
+   "fibra_g": 0.9,
+   "hierro_mg": 0.47,
+   "magnesio_mg": 3,
+   "fosforo_mg": 13,
+   "sodio_mg": 9,
+   "cobre_mg": 0.05,
+   "manganeso_mg": 0.053,
+   "colesterol_mg": 0,
+   "grasa_sat_g": 0.009,
+   "vit_c_mg": 0,
+   "b1_mg": 0,
+   "b2_mg": 0,
+   "folato_ug": 0,
+   "b12_ug": 0,
+   "vit_d_ug": 0,
+   "selenio_ug": 2.8
+  },
+  "porciones": [
+   {
+    "texto": "1 cup",
+    "gramos": 128
+   }
+  ]
  }
 ]
