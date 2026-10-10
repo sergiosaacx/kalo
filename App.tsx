@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { Alimentos } from './src/screens/Alimentos';
 import { Hoy } from './src/screens/Hoy';
 import { C } from './src/theme';
 
@@ -16,6 +17,8 @@ export default function App() {
         <ScrollView key={tab} style={{ flex: 1 }} contentContainerStyle={s.scroll}>
           {tab === 'hoy' ? (
             <Hoy irA={setTab} />
+          ) : tab === 'alimentos' ? (
+            <Alimentos />
           ) : (
             <View style={s.pronto}>
               <Text style={s.prontoTit}>{TABS.find(t => t[0] === tab)?.[1]}</Text>
