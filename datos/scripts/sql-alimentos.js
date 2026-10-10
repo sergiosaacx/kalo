@@ -17,7 +17,9 @@ const ajustes = JSON.parse(fs.readFileSync(path.join(DATOS, 'porciones-ajustes.j
 const conAjuste = (id, lista) => ajustes[id] ? [ajustes[id], ...lista.filter(p => p.texto !== ajustes[id].texto)] : lista;
 const filas = lista.map(a => {
   const porciones = conAjuste(a.id, a.porciones_es || porcionesEs(a.porciones));
-  const base = ajustes[a.id] || porcionBase(porciones);
+  // Grasas: la porción casera es la cucharada, nunca la taza
+  const cucharada = a.categoria === 'grasas' && porciones.find(p => /^1 cucharada$/.test(p.texto));
+  const base = ajustes[a.id] || cucharada || porcionBase(porciones);
   return `(${[
   q(a.id), q(a.nombre), `array[${a.sinonimos.map(q).join(',')}]::text[]`, q(a.categoria), q(a.fuente),
   q(JSON.stringify(redondear(a.por_100g))) + '::jsonb', q(JSON.stringify(porciones)) + '::jsonb',
