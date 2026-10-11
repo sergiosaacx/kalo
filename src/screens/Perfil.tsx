@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Boton, Campo, FechaNacimiento, Segmento, u } from '../components/ui';
 import { NotificacionesPerfil } from '../components/Notificaciones';
 import { MetaPeso, TarjetaMeta } from './MetaPeso';
+import { TarjetaSalud } from '../components/Salud';
 import { useSesion, type PerfilActivo } from '../data/sesion';
 import { edadDe, errorFecha, fechaValida, type Sexo } from '../logic/energia';
 import { C } from '../theme';
@@ -41,6 +42,8 @@ export function Perfil({ nuevoPerfil }: { nuevoPerfil: () => void }) {
       </View>
 
       <TarjetaMeta key={'m' + activo.id} p={activo} abrir={() => setViendoMeta(true)} />
+
+      <TarjetaSalud key={'s' + activo.id} valor={activo.salud} guardar={v => actualizarPerfil(activo.id, { salud: v })} />
 
       <Datos key={activo.id} p={activo} guardar={cambios => actualizarPerfil(activo.id, cambios)} />
 

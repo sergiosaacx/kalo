@@ -5,6 +5,25 @@ export type Sexo = 'F' | 'M';
 export type Meta = 'bajar' | 'mantener' | 'subir';
 export type Trabajo = 'sentado' | 'pie' | 'fisico';
 
+// «Tu salud»: solo condiciones con efecto medido sobre lo que el cuerpo quema en reposo
+export interface Salud {
+  tiroides: 'hipo' | 'hiper' | null;
+  medicamento: 'si' | 'no' | 'nose' | null; // para la tiroides
+  conMedico: boolean;                        // «Mi médico me dio un ajuste»
+  medico: number | null;                     // ese ajuste, en % (−15 … +10)
+  ninguna: boolean;
+}
+export const SALUD_VACIA: Salud = { tiroides: null, medicamento: null, conMedico: false, medico: null, ninguna: false };
+
+// % que cambia el metabolismo en reposo. El del médico manda; hipotiroidismo −5 % (Muraca 2020: 4–6 % menos
+// en tratadas, con el mismo peso, edad y actividad). Hipertiroidismo: no hay un número confiable, no se suma nada.
+export function pctSalud(s?: Salud | null) {
+  if (!s) return 0;
+  if (s.conMedico && s.medico != null) return s.medico;
+  return s.tiroides === 'hipo' ? -5 : 0;
+}
+export const tieneCondicion = (s?: Salud | null) => !!s && (s.tiroides !== null || s.conMedico);
+
 export interface Perfil {
   id: string;
   nombre: string;
@@ -25,6 +44,7 @@ export interface Perfil {
   rutina?: Rutina; // «Tu día»: si existe, el gasto se calcula con ella
   ajusteKcal?: number;   // ajuste aceptado en «Meta de peso» según cómo va el peso
   ajusteDesde?: string;  // YYYY-MM-DD: desde ahí se vuelve a medir el ritmo real
+  salud?: Salud | null;  // «Tu salud»
 }
 
 const TRABAJO_KCAL: Record<Trabajo, number> = { sentado: 0, pie: 180, fisico: 380 };
@@ -61,7 +81,7 @@ export const basalDe = (p: Pick<Perfil, 'peso' | 'estatura' | 'edad' | 'sexo'>) 
   Math.round(10 * p.peso + 6.25 * p.estatura - 5 * p.edad + (p.sexo === 'M' ? 5 : -161));
 
 export function gasto(p: Perfil) {
-  const basal = basalDe(p);
+  const basal = Math.round(basalDe(p) * (1 + pctSalud(p.salud) / 100));
   const ajuste = (p.meta === 'bajar' ? -Math.round(p.ritmo * 1100) : p.meta === 'subir' ? Math.round(p.ritmo * 1100) : 0) + (p.ajusteKcal ?? 0);
   // Con «Tu día»: método factorial hora por hora (logic/actividad.ts)
   if (p.rutina) {

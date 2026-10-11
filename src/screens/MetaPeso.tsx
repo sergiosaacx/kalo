@@ -5,13 +5,14 @@ import { Boton, Chips, Segmento, u } from '../components/ui';
 import { hoyISO } from '../data/plan';
 import { usePesos } from '../data/peso';
 import { useSesion, type PerfilActivo } from '../data/sesion';
-import { fmt, gasto, type Meta } from '../logic/energia';
+import { fmt, gasto, tieneCondicion, type Meta } from '../logic/energia';
 import { dias, fechaMeta, llego, proponerAjuste, ritmoPlan, sumarDias, type RegistroPeso } from '../logic/peso';
 import { C } from '../theme';
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const kg = (n: number) => (Math.round(n * 10) / 10).toLocaleString('es-CO');
+const rit = (n: number) => (Math.round(n * 100) / 100).toLocaleString('es-CO'); // ritmo: 0,25 no se redondea
 const conSignoKg = (n: number) => (n > 0 ? '+' : n < 0 ? '−' : '') + kg(Math.abs(n));
 const partes = (f: string) => { const [a, m, d] = f.split('-').map(Number); return { a, m: m - 1, d }; };
 export const fechaCorta = (f: string) => { const x = partes(f); return `${x.d} ${CORTOS[x.m]}`; };
@@ -44,7 +45,7 @@ export function TarjetaMeta({ p, abrir }: { p: PerfilActivo; abrir: () => void }
         {p.meta === 'mantener' ? `Mantener ${kg(p.pesoMeta)} kg` : `${kg(a.actual)} kg → ${kg(p.pesoMeta)} kg`}
       </Text>
       {p.meta !== 'mantener' && (
-        <Text style={s.muted13}>{p.meta === 'subir' ? 'Subir' : 'Bajar'} {kg(p.ritmo)} kg por semana{llega ? ` · llegarías el ${fechaCorta(llega)}` : ''}</Text>
+        <Text style={s.muted13}>{p.meta === 'subir' ? 'Subir' : 'Bajar'} {rit(p.ritmo)} kg por semana{llega ? ` · llegarías el ${fechaCorta(llega)}` : ''}</Text>
       )}
       {p.meta !== 'mantener' && <View style={[s.track, { marginTop: 4 }]}><View style={[s.fill, { width: `${Math.max(2, a.pct * 100)}%` }]} /></View>}
       <Text style={[s.link, { fontSize: 14 }]}>Anotar peso y ver avance →</Text>
@@ -116,7 +117,7 @@ export function MetaPeso({ volver }: { volver: () => void }) {
           <Grafica p={p} rs={lista} hoy={hoy} />
           <View style={{ flexDirection: 'row', gap: 16 }}>
             <Text style={s.muted12}><Text style={{ color: C.accent }}>●</Text> Tus pesos</Text>
-            <Text style={s.muted12}>- - {p.meta === 'mantener' ? 'Tu meta' : `Plan (${kg(p.ritmo)} kg/semana)`}</Text>
+            <Text style={s.muted12}>- - {p.meta === 'mantener' ? 'Tu meta' : `Plan (${rit(p.ritmo)} kg/semana)`}</Text>
           </View>
         </View>
       )}
@@ -144,10 +145,10 @@ export function MetaPeso({ volver }: { volver: () => void }) {
             {p.meta === 'mantener' ? (propuesta.real > 0 ? 'Tu peso está subiendo' : 'Tu peso está bajando') : propuesta.lento ? 'Vas más lento que el plan' : 'Vas más rápido que el plan'}
           </Text>
           <Text style={u.soft}>
-            {`En ${fmt(propuesta.semanas)} semanas ${propuesta.real >= 0 ? 'subiste' : 'bajaste'} ${kg(Math.abs(propuesta.real * propuesta.semanas))} kg: ${kg(Math.abs(propuesta.real))} kg por semana`}
-            {p.meta === 'mantener' ? '. ' : `, y el plan es ${kg(p.ritmo)}. `}
+            {`En ${fmt(propuesta.semanas)} semanas ${propuesta.real >= 0 ? 'subiste' : 'bajaste'} ${kg(Math.abs(propuesta.real * propuesta.semanas))} kg: ${rit(Math.abs(propuesta.real))} kg por semana`}
+            {p.meta === 'mantener' ? '. ' : `, y el plan es ${rit(p.ritmo)}. `}
             {p.meta !== 'mantener' && (propuesta.llegaria ? `A este ritmo llegarías el ${fechaLarga(propuesta.llegaria)}. ` : 'A este ritmo no llegarías a tu meta. ')}
-            {p.meta === 'mantener' ? 'Para quedarte en tu peso' : `Para volver al ritmo de ${kg(p.ritmo)} kg por semana`}, come {fmt(Math.abs(propuesta.cambio))} kcal {propuesta.cambio > 0 ? 'más' : 'menos'} al día.
+            {p.meta === 'mantener' ? 'Para quedarte en tu peso' : `Para volver al ritmo de ${rit(p.ritmo)} kg por semana`}, come {fmt(Math.abs(propuesta.cambio))} kcal {propuesta.cambio > 0 ? 'más' : 'menos'} al día.
           </Text>
           <Boton texto={`Comer ${fmt(propuesta.objetivoNuevo)} kcal al día`}
             onPress={() => actualizarPerfil(p.id, { ajusteKcal: (p.ajusteKcal ?? 0) + propuesta.cambio, ajusteDesde: ultimo.fecha })} />
@@ -178,6 +179,7 @@ export function MetaPeso({ volver }: { volver: () => void }) {
 
       <View style={s.naranja}>
         <View>
+          {tieneCondicion(p.salud) && <Text style={s.pill}>Aproximado</Text>}
           <Text style={{ color: C.onAccent, fontSize: 13, fontWeight: '600' }}>Tu objetivo diario</Text>
           <Text style={{ color: C.onAccent, fontSize: 32, fontWeight: '700', letterSpacing: -0.6 }}>{fmt(en.objetivo)} kcal</Text>
         </View>
@@ -260,4 +262,5 @@ const s = StyleSheet.create({
   naranja: { backgroundColor: C.accent, borderRadius: 22, padding: 18, gap: 12 },
   nTxt: { color: C.onAccent, fontSize: 13.5 },
   nB: { color: C.onAccent, fontSize: 14, fontWeight: '700' },
+  pill: { alignSelf: 'flex-start', color: C.onAccent, fontSize: 11.5, fontWeight: '700', borderWidth: 1.5, borderColor: C.onAccent, borderRadius: 9, paddingHorizontal: 8, paddingVertical: 1, marginBottom: 6 },
 });

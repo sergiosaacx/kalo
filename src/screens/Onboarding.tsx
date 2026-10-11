@@ -3,8 +3,9 @@ import { ScrollView, Text, View } from 'react-native';
 import { Boton, Campo, Chips, FechaNacimiento, Segmento, Stepper, u } from '../components/ui';
 import { useSesion } from '../data/sesion';
 import { TEXTO_NOTIF } from '../components/Notificaciones';
+import { ListaSalud, PreguntasSalud, errorLista, errorPreguntas, motivoSalud, necesitaPreguntas } from '../components/Salud';
 import { activarNotificaciones, estadoNotif, marcarPreguntado } from '../data/notificaciones';
-import { edadDe, errorFecha, fechaValida, fmt, gasto, type Meta, type Perfil, type Sexo } from '../logic/energia';
+import { SALUD_VACIA, edadDe, errorFecha, fechaValida, fmt, gasto, tieneCondicion, type Meta, type Perfil, type Sexo } from '../logic/energia';
 import { TuDia } from './TuDia';
 import { C } from '../theme';
 
@@ -16,8 +17,8 @@ const INICIAL: Borrador = {
 const fq = (n: number) => (Math.round(n * 10) / 10).toLocaleString('es-CO');
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
-// Registro de un perfil en 4 pasos: Bienvenida → Datos → Tu día → Meta (handoff › Onboarding).
-// Al registrarse (primer perfil) hay un 5.º paso: activar las notificaciones en este celular.
+// Registro de un perfil en 5 pasos: Bienvenida → Datos → Tu salud → Tu día → Meta (handoff › Onboarding + «Tu salud»).
+// Al registrarse (primer perfil) hay un 6.º paso: activar las notificaciones en este celular.
 export function Onboarding({ primero, onCancelar, onCreado }: { primero: boolean; onCancelar?: () => void; onCreado?: () => void }) {
   const { crearPerfil } = useSesion();
   const [paso, setPaso] = useState(0);
@@ -29,7 +30,10 @@ export function Onboarding({ primero, onCancelar, onCreado }: { primero: boolean
   const set = (p: Partial<Borrador>) => setD(x => ({ ...x, ...p }));
   // Solo si este celular puede pedir el permiso y aún no lo ha respondido
   const [conAvisos] = useState(() => primero && estadoNotif() === 'preguntar');
-  const total = conAvisos ? 5 : 4;
+  const total = conAvisos ? 6 : 5;
+  // «Tu salud» tiene dos partes: la lista y, si hace falta, las preguntas de lo marcado
+  const [saludPreguntas, setSaludPreguntas] = useState(false);
+  const salud = d.salud ?? SALUD_VACIA;
   const ultimo = total - 1;
 
   const num = (k: 'estatura' | 'peso', v: string) => {
@@ -58,6 +62,14 @@ export function Onboarding({ primero, onCancelar, onCreado }: { primero: boolean
       // Meta por defecto coherente con el peso escrito
       set({ fechaNacimiento: f, edad: edadDe(f), pesoMeta: d.meta === 'mantener' ? d.peso : d.meta === 'bajar' ? Math.round(d.peso - 5) : Math.round(d.peso + 3) });
     }
+    if (paso === 2) {
+      const es = saludPreguntas ? errorPreguntas(salud) : errorLista(salud);
+      setError(es);
+      if (es) return;
+      if (!saludPreguntas && necesitaPreguntas(salud)) return setSaludPreguntas(true);
+      // Con alguna condición, el ritmo sugerido arranca en el más suave
+      if (tieneCondicion(salud)) set({ ritmo: 0.25 });
+    }
     if (paso < ultimo) return setPaso(paso + 1);
     await crear();
   };
@@ -77,11 +89,11 @@ export function Onboarding({ primero, onCancelar, onCreado }: { primero: boolean
   const semanas = d.meta === 'mantener' ? 0 : Math.ceil(Math.abs(d.peso - d.pesoMeta) / d.ritmo);
   const fecha = new Date(Date.now() + semanas * 7 * 864e5);
 
-  // Paso 3: el cuestionario «Tu día» completo (con sus propios botones fijos)
-  if (paso === 2) {
+  // Paso 4: el cuestionario «Tu día» completo (con sus propios botones fijos)
+  if (paso === 3) {
     return (
-      <TuDia base={{ edad: d.edad, estatura: d.estatura, peso: d.peso, sexo: d.sexo }} inicial={d.rutina}
-        onSalir={() => setPaso(1)} onListo={r => { set({ rutina: r }); setPaso(3); }} />
+      <TuDia base={{ edad: d.edad, estatura: d.estatura, peso: d.peso, sexo: d.sexo, salud: d.salud }} inicial={d.rutina}
+        onSalir={() => setPaso(2)} onListo={r => { set({ rutina: r }); setPaso(4); }} />
     );
   }
 
@@ -117,9 +129,22 @@ export function Onboarding({ primero, onCancelar, onCreado }: { primero: boolean
           </>
         )}
 
-        {paso === 3 && (
+        {paso === 2 && (
           <>
-            <Text style={{ fontSize: 13, color: C.muted }}>Paso 4 de {total}</Text>
+            <Text style={{ fontSize: 13, color: C.muted }}>Paso 3 de {total}</Text>
+            <Text style={u.h1}>Tu salud</Text>
+            {!saludPreguntas ? (
+              <>
+                <Text style={u.soft}>Algunas condiciones hacen que el cuerpo queme más o menos calorías. Marca si tienes alguna.</Text>
+                <ListaSalud valor={salud} onCambio={v => set({ salud: v })} />
+              </>
+            ) : <PreguntasSalud valor={salud} onCambio={v => set({ salud: v })} />}
+          </>
+        )}
+
+        {paso === 4 && (
+          <>
+            <Text style={{ fontSize: 13, color: C.muted }}>Paso 5 de {total}</Text>
             <Text style={u.h1}>Tu meta</Text>
             <Segmento<Meta> opciones={[['bajar', 'Bajar'], ['mantener', 'Mantener'], ['subir', 'Subir']]} valor={d.meta}
               onCambio={v => set({ meta: v, pesoMeta: v === 'mantener' ? d.peso : v === 'bajar' ? Math.min(d.pesoMeta, d.peso - 1) : Math.max(d.pesoMeta, d.peso + 1) })} />
@@ -131,20 +156,31 @@ export function Onboarding({ primero, onCancelar, onCreado }: { primero: boolean
               </View>
             )}
             <Text style={[u.soft, { fontSize: 14 }]}>Tu cuerpo gasta unas <Text style={{ color: C.text, fontWeight: '700' }}>{fmt(en.total)} kcal</Text> al día, según tu día.</Text>
-            <View style={{ backgroundColor: C.accent, borderRadius: 22, padding: 18, gap: 4 }}>
-              <Text style={{ color: C.onAccent, fontSize: 13 }}>Come al día</Text>
+            <View style={{ backgroundColor: C.accent, borderRadius: 22, paddingHorizontal: 18, paddingVertical: 16, gap: 4 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={{ color: C.onAccent, fontSize: 13 }}>Come al día</Text>
+                {tieneCondicion(d.salud) && <Text style={{ color: C.onAccent, fontSize: 11.5, fontWeight: '700', borderWidth: 1.5, borderColor: C.onAccent, borderRadius: 9, paddingHorizontal: 8, paddingVertical: 1 }}>Aproximado</Text>}
+              </View>
               <Text style={{ color: C.onAccent, fontSize: 40, fontWeight: '700', letterSpacing: -1.2 }}>{fmt(en.objetivo)} kcal</Text>
               <Text style={{ color: C.onAccent, fontSize: 14 }}>
                 {d.meta === 'mantener' ? 'Para mantener tu peso actual.'
                   : `Llegarías a ${fq(d.pesoMeta)} kg hacia el ${fecha.getDate()} de ${MESES[fecha.getMonth()]} de ${fecha.getFullYear()} (${semanas} semanas).`}
               </Text>
+              {motivoSalud(d.salud) && (
+                <Text style={{ color: C.onAccent, fontSize: 13, marginTop: 2 }}>
+                  Incluye {motivoSalud(d.salud)} (sin eso: {fmt(gasto({ ...d, id: '', color: '', salud: null }).objetivo)} kcal).
+                </Text>
+              )}
+              {d.salud?.tiroides === 'hiper' && d.salud.medicamento !== 'si' && !d.salud.conMedico && (
+                <Text style={{ color: C.onAccent, fontSize: 13, marginTop: 2 }}>Sin tratamiento puede quedarse corto: pésate cada semana.</Text>
+              )}
             </View>
           </>
         )}
 
-        {paso === 4 && (
+        {paso === 5 && (
           <View style={{ gap: 14, paddingTop: 30 }}>
-            <Text style={{ fontSize: 13, color: C.muted }}>Paso 5 de 5</Text>
+            <Text style={{ fontSize: 13, color: C.muted }}>Paso 6 de 6</Text>
             <Text style={[u.h1, { fontSize: 34 }]}>Activa las notificaciones</Text>
             <Text style={u.soft}>{TEXTO_NOTIF}</Text>
             <Text style={u.soft}>Al tocar «Activar notificaciones» el celular te pide permiso: toca «Permitir».</Text>
@@ -157,15 +193,15 @@ export function Onboarding({ primero, onCancelar, onCreado }: { primero: boolean
         {error && <Text style={u.error}>{error}</Text>}
         <View style={{ flexDirection: 'row', gap: 10 }}>
           {(paso > 0 || onCancelar) && (
-            <View style={{ flex: 1 }}><Boton texto={paso === 0 ? 'Cancelar' : 'Atrás'} tipo="borde" onPress={() => (paso === 0 ? onCancelar?.() : setPaso(paso - 1))} /></View>
+            <View style={{ flex: 1 }}><Boton texto={paso === 0 ? 'Cancelar' : 'Atrás'} tipo="borde" onPress={() => { setError(null); if (paso === 2 && saludPreguntas) setSaludPreguntas(false); else if (paso === 0) onCancelar?.(); else setPaso(paso - 1); }} /></View>
           )}
           <View style={{ flex: 2 }}>
-            {paso === 4
+            {paso === 5
               ? <Boton texto="Activar notificaciones" onPress={async () => { await activarNotificaciones(); await crear(); }} cargando={guardando} />
               : <Boton texto={paso === ultimo ? 'Crear perfil' : paso === 0 ? 'Empezar' : 'Continuar'} onPress={siguiente} cargando={guardando} />}
           </View>
         </View>
-        {paso === 4 && <Boton texto="Ahora no" tipo="texto" onPress={() => { marcarPreguntado(); crear(); }} desactivado={guardando} />}
+        {paso === 5 && <Boton texto="Ahora no" tipo="texto" onPress={() => { marcarPreguntado(); crear(); }} desactivado={guardando} />}
       </View>
     </View>
   );

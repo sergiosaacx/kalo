@@ -5,7 +5,7 @@ import {
   CASA, EJERCICIOS, EXTRA_INICIAL, OFICIOS, RESTO, RUTINA_INICIAL, TRABAJO_COMO, TRANSPORTES, gastoPorRutina, hora12, horasEntre, horasJornada, horasSueno,
   type Casa, type Ejercicio, type Intensidad, type Ocupacion, type Resto, type Rutina, type TrabajoExtra, type Transporte,
 } from '../logic/actividad';
-import { edadDe, errorFecha, fechaValida, fmt, gasto, type Sexo } from '../logic/energia';
+import { edadDe, errorFecha, fechaValida, fmt, gasto, type Salud, type Sexo } from '../logic/energia';
 import { reconocer } from '../data/actividades';
 import { C } from '../theme';
 
@@ -165,7 +165,7 @@ function Opciones<T extends string>({ opciones, valor, onCambio }: { opciones: [
 // registro y en la pestaña Gasto: arranca en el sueño y al final entrega la rutina con onListo.
 export function TuDia({ onSalir, base, inicial, onListo, textoListo = 'Continuar' }: {
   onSalir?: () => void;
-  base?: { edad: number; estatura: number; peso: number; sexo: Sexo };
+  base?: { edad: number; estatura: number; peso: number; sexo: Sexo; salud?: Salud | null };
   inicial?: Rutina;
   onListo?: (r: Rutina) => void | Promise<void>;
   textoListo?: string;
@@ -188,7 +188,7 @@ export function TuDia({ onSalir, base, inicial, onListo, textoListo = 'Continuar
   const fechaNac = fechaValida(nac.dia, nac.mes, nac.anio);
   const edad = base?.edad ?? (fechaNac ? edadDe(fechaNac) : 30);
   const estatura = base?.estatura ?? parseFloat(datos.estatura), peso = base?.peso ?? parseFloat(datos.peso.replace(',', '.'));
-  const perfil = { id: '', nombre: '', edad, sexo: base?.sexo ?? datos.sexo, estatura, peso, pesoInicial: peso, meta: 'mantener' as const, pesoMeta: peso, ritmo: 0.5, trabajo: 'pie' as const, pasos: 6000, ejercicio: 20, sueno: 7, color: '' };
+  const perfil = { id: '', nombre: '', edad, sexo: base?.sexo ?? datos.sexo, estatura, peso, pesoInicial: peso, meta: 'mantener' as const, pesoMeta: peso, ritmo: 0.5, trabajo: 'pie' as const, pasos: 6000, ejercicio: 20, sueno: 7, color: '', salud: base?.salud };
   const listo = async () => { if (!onListo) return; setGuardando(true); await onListo(r); setGuardando(false); };
 
   const validar = (): string | null => {
