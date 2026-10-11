@@ -8,7 +8,7 @@ import { C } from '../theme';
 
 // Perfiles de la familia + datos del perfil activo (handoff › Perfil)
 export function Perfil({ nuevoPerfil }: { nuevoPerfil: () => void }) {
-  const { perfiles, activo, activar, actualizarPerfil, salir, sesion } = useSesion();
+  const { perfiles, activo, activar, actualizarPerfil, borrarPerfil, salir, sesion } = useSesion();
   if (!activo) return null;
 
   return (
@@ -38,6 +38,8 @@ export function Perfil({ nuevoPerfil }: { nuevoPerfil: () => void }) {
       </View>
 
       <Datos key={activo.id} p={activo} guardar={cambios => actualizarPerfil(activo.id, cambios)} />
+
+      {perfiles.length > 1 && <BorrarPerfil key={'b' + activo.id} nombre={activo.nombre} borrar={() => borrarPerfil(activo.id)} />}
 
       <NotificacionesPerfil />
 
@@ -83,6 +85,31 @@ function Datos({ p, guardar }: { p: PerfilActivo; guardar: (c: Partial<PerfilAct
       <Segmento<Sexo> opciones={[['F', 'Mujer'], ['M', 'Hombre']]} valor={f.sexo} onCambio={v => setF({ ...f, sexo: v })} />
       {estado && <Text style={estado.tipo === 'ok' ? { color: C.success, fontSize: 14 } : u.error}>{estado.txt}</Text>}
       <Boton texto="Guardar cambios" onPress={onGuardar} cargando={guardando} desactivado={!cambiado} />
+    </View>
+  );
+}
+
+// Borrar el perfil activo, con confirmación dentro de la tarjeta (nada de diálogos del navegador)
+function BorrarPerfil({ nombre, borrar }: { nombre: string; borrar: () => Promise<string | null> }) {
+  const [confirmar, setConfirmar] = useState(false);
+  const [borrando, setBorrando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (!confirmar) return <Boton texto={`Borrar el perfil de ${nombre}`} tipo="texto" onPress={() => setConfirmar(true)} />;
+  const onBorrar = async () => {
+    setBorrando(true);
+    const e = await borrar();
+    setBorrando(false);
+    if (e) setError(e);
+  };
+  return (
+    <View style={[u.card, { gap: 12, borderWidth: 1, borderColor: C.accent }]}>
+      <Text style={{ fontSize: 17, fontWeight: '700', color: C.text }}>¿Borrar el perfil de {nombre}?</Text>
+      <Text style={u.soft}>Se borran sus datos, sus comidas y sus pesos. Esto no se puede deshacer.</Text>
+      {error && <Text style={u.error}>{error}</Text>}
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        <View style={{ flex: 1 }}><Boton texto="Cancelar" tipo="borde" onPress={() => setConfirmar(false)} desactivado={borrando} /></View>
+        <View style={{ flex: 1 }}><Boton texto="Sí, borrar" onPress={onBorrar} cargando={borrando} /></View>
+      </View>
     </View>
   );
 }

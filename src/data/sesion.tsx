@@ -51,6 +51,7 @@ interface Ctx {
   crearPerfil: (p: Omit<Perfil, 'id' | 'color'>) => Promise<string | null>;
   actualizarPerfil: (id: string, p: Partial<Perfil>) => Promise<string | null>;
   activar: (id: string) => Promise<void>;
+  borrarPerfil: (id: string) => Promise<string | null>;
   salir: () => Promise<void>;
 }
 
@@ -105,11 +106,23 @@ export function SesionProvider({ children }: { children: React.ReactNode }) {
     return null;
   }, [cargarPerfiles]);
 
+  // Borra el perfil y todo lo suyo (comidas, pesos, avisos: en cascada). Si era el activo, queda activo otro.
+  const borrarPerfil = useCallback(async (id: string) => {
+    const resto = perfiles.filter(p => p.id !== id);
+    if (resto.length === 0) return 'No puedes borrar el único perfil de la cuenta.';
+    const eraActivo = (perfiles.find(p => p.activo) ?? perfiles[0])?.id === id;
+    const { error } = await supabase.from('perfiles').delete().eq('id', id);
+    if (error) return 'No pudimos borrar el perfil. Revisa tu conexión e inténtalo de nuevo.';
+    if (eraActivo) await supabase.rpc('activar_perfil', { p: resto[0].id });
+    await cargarPerfiles();
+    return null;
+  }, [perfiles, cargarPerfiles]);
+
   const salir = useCallback(async () => { await soltarEsteCelular(); await supabase.auth.signOut(); }, []);
 
   const activo = perfiles.find(p => p.activo) ?? perfiles[0] ?? null;
   return (
-    <SesionCtx.Provider value={{ cargando, sesion, perfiles, activo, crearPerfil, actualizarPerfil, activar, salir }}>
+    <SesionCtx.Provider value={{ cargando, sesion, perfiles, activo, crearPerfil, actualizarPerfil, activar, borrarPerfil, salir }}>
       {children}
     </SesionCtx.Provider>
   );
