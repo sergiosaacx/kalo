@@ -22,7 +22,7 @@ function nombreAuto(items: ItemOpcion[], porId: Mapa) {
   return `${n[0]} con ${resto.length === 1 ? resto[0] : resto.slice(0, -1).join(', ') + ' y ' + resto[resto.length - 1]}`;
 }
 
-interface Borrador { id?: string; comida: ComidaId; nombre: string; items: ItemOpcion[]; tiempo_min: number | null; dificultad: Dificultad | null }
+interface Borrador { id?: string; comida: ComidaId; nombre: string; items: ItemOpcion[]; tiempo_min: number | null; dificultad: Dificultad | null; fuente?: 'mia' | 'ia' }
 
 export function Menu() {
   const { activo } = useSesion();
@@ -36,7 +36,8 @@ export function Menu() {
   const [comidaOp, setComidaOp] = useState<ComidaId>(comidaDeAhora());
   const [rapidas, setRapidas] = useState(false);
   const [borrador, setBorrador] = useState<Borrador | null>(null);
-  const [picker, setPicker] = useState<{ destino: 'dia' | 'borrador'; comida: ComidaId } | null>(null);
+  // reemplazar: posición del alimento de la opción que se cambia por otro
+  const [picker, setPicker] = useState<{ destino: 'dia' | 'borrador'; comida: ComidaId; reemplazar?: number } | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const plan = usePlanDia(activo?.id, dia);
   const porId: Mapa = useMemo(() => new Map((alimentos ?? []).map(a => [a.id, a])), [alimentos]);
@@ -77,10 +78,15 @@ export function Menu() {
   // ── Buscador de alimentos (para el día o para la opción que se está creando)
   if (picker) {
     return (
-      <AlimentoPicker titulo={picker.destino === 'dia' ? `Agregar a ${nombreComida(picker.comida).toLowerCase()} · ${diaCorto(dia)}` : 'Agregar a la opción'}
+      <AlimentoPicker
+        titulo={picker.destino === 'dia' ? `Agregar a ${nombreComida(picker.comida).toLowerCase()} · ${diaCorto(dia)}`
+          : picker.reemplazar !== undefined && borrador ? `Cambiar ${porId.get(borrador.items[picker.reemplazar]?.alimento_id)?.nombre.toLowerCase() ?? 'alimento'} por…` : 'Agregar a la opción'}
         onCerrar={() => setPicker(null)}
         onElegir={async a => {
-          if (picker.destino === 'borrador' && borrador) {
+          if (picker.destino === 'borrador' && borrador && picker.reemplazar !== undefined) {
+            // Reemplaza ese alimento conservando el lugar; la porción vuelve a 1
+            setBorrador({ ...borrador, items: borrador.items.map((i, k) => (k === picker.reemplazar ? { alimento_id: a.id, cantidad: 1 } : i)) });
+          } else if (picker.destino === 'borrador' && borrador) {
             const ya = borrador.items.find(i => i.alimento_id === a.id);
             setBorrador({ ...borrador, items: ya ? borrador.items.map(i => (i === ya ? { ...i, cantidad: i.cantidad + 1 } : i)) : [...borrador.items, { alimento_id: a.id, cantidad: 1 }] });
           } else {
@@ -139,7 +145,13 @@ export function Menu() {
             </Text>
           </View>
         </>)}
-        <Boton texto="↻ Otra combinación" tipo="borde" onPress={() => setRecom({ ...recom, semilla: recom.semilla + 1 })} />
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <View style={{ flex: 1 }}><Boton texto="↻ Otra" tipo="borde" onPress={() => setRecom({ ...recom, semilla: recom.semilla + 1 })} /></View>
+          {r && <View style={{ flex: 1 }}><Boton texto="Editar" tipo="borde" onPress={() => {
+            setBorrador({ comida: recom.comida, nombre: r.nombre, items: r.items.map(i => ({ ...i })), tiempo_min: r.tiempo_min, dificultad: 'facil', fuente: 'ia' });
+            setRecom(null);
+          }} /></View>}
+        </View>
         {r && (
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <View style={{ flex: 1 }}><Boton texto="Guardar opción" tipo="borde" onPress={async () => {
@@ -166,10 +178,22 @@ export function Menu() {
     return (
       <Constructor b={borrador} set={setBorrador} t={t} presupuesto={pres} porId={porId}
         agregar={() => setPicker({ destino: 'borrador', comida: borrador.comida })}
+        reemplazar={k => setPicker({ destino: 'borrador', comida: borrador.comida, reemplazar: k })}
         cancelar={() => setBorrador(null)}
-        guardar={async () => {
-          const e = await guardarOpcion({ ...borrador, nombre: borrador.nombre.trim() || nombreAuto(borrador.items, porId) });
+        dia={diaCorto(dia)}
+        guardar={async usarlo => {
+          const nombre = borrador.nombre.trim() || nombreAuto(borrador.items, porId);
+          const e = await guardarOpcion({ ...borrador, nombre });
           if (e) return e;
+          if (usarlo) {
+            const comida = eligiendo ?? borrador.comida;
+            const e2 = await aplicarAlDia(activo.id, dia, comida, borrador.items, nombre, null);
+            if (e2) return e2;
+            await plan.recargar();
+            setBorrador(null); setEligiendo(null); setVista(volverA);
+            mostrarAviso(`Listo: ${nombre} en ${nombreComida(comida).toLowerCase()} del ${diaTexto(dia)}.`);
+            return null;
+          }
           setComidaOp(borrador.comida); setBorrador(null); setVista('opciones');
           mostrarAviso('Opción guardada.');
           return null;
@@ -234,10 +258,9 @@ export function Menu() {
                   </View>
                   <Text style={s.muted13}>P {fmt(t.p)} g · C {fmt(t.c)} g · G {fmt(t.g)} g</Text>
                   <View style={{ flexDirection: 'row', gap: 8 }}>
-                    {o.fuente !== 'kalo' && (
-                      <View style={{ flex: 1 }}><Boton texto="Editar" tipo="borde"
-                        onPress={() => setBorrador({ id: o.id, comida: o.comida, nombre: o.nombre, items: o.items.map(i => ({ ...i })), tiempo_min: o.tiempo_min, dificultad: o.dificultad })} /></View>
-                    )}
+                    {/* Las tuyas se editan; las de Kalo se personalizan: se crea tu versión y la original no se toca */}
+                    <View style={{ flex: 1 }}><Boton texto={o.fuente === 'kalo' ? 'Personalizar' : 'Editar'} tipo="borde"
+                      onPress={() => setBorrador({ id: o.fuente === 'kalo' ? undefined : o.id, comida: o.comida, nombre: o.nombre, items: o.items.map(i => ({ ...i })), tiempo_min: o.tiempo_min, dificultad: o.dificultad })} /></View>
                     <View style={{ flex: 2 }}><Boton texto={`Usar el ${diaCorto(dia)}`} onPress={() => usar(o)} /></View>
                   </View>
                 </View>
@@ -326,12 +349,13 @@ function Semana({ dia, setDia, plan, porId, objetivo, presupuesto, armar, cambia
   );
 }
 
-function Constructor({ b, set, t, presupuesto, porId, agregar, cancelar, guardar, borrar }: {
-  b: Borrador; set: (b: Borrador) => void; t: { k: number; p: number; c: number; g: number }; presupuesto: number; porId: Mapa;
-  agregar: () => void; cancelar: () => void; guardar: () => Promise<string | null>; borrar?: () => Promise<string | null>;
+function Constructor({ b, set, t, presupuesto, porId, dia, agregar, reemplazar, cancelar, guardar, borrar }: {
+  b: Borrador; set: (b: Borrador) => void; t: { k: number; p: number; c: number; g: number }; presupuesto: number; porId: Mapa; dia: string;
+  agregar: () => void; reemplazar: (k: number) => void; cancelar: () => void;
+  guardar: (usarlo: boolean) => Promise<string | null>; borrar?: () => Promise<string | null>;
 }) {
   const [error, setError] = useState<string | null>(null);
-  const [guardando, setGuardando] = useState(false);
+  const [guardando, setGuardando] = useState<'' | 'guardar' | 'usar'>('');
   const [confirmar, setConfirmar] = useState(false);
   const aj = ajuste(t.k, presupuesto);
   const cambiar = (k: number, d: number) => {
@@ -341,7 +365,7 @@ function Constructor({ b, set, t, presupuesto, porId, agregar, cancelar, guardar
   return (
     <View style={{ gap: 14 }}>
       <View style={{ gap: 2, paddingTop: 4 }}>
-        <Text style={s.muted13}>{b.id ? 'Editar opción' : `Nueva opción de ${nombreComida(b.comida).toLowerCase()}`}</Text>
+        <Text style={s.muted13}>{b.id ? 'Editar opción' : `Tu opción de ${nombreComida(b.comida).toLowerCase()} · cambia o quita lo que quieras`}</Text>
         <Text style={u.h1}>{b.nombre.trim() || nombreAuto(b.items, porId)}</Text>
       </View>
       <TextInput value={b.nombre} onChangeText={v => set({ ...b, nombre: v })} placeholder={b.items.length ? nombreAuto(b.items, porId) : 'Nombre, ej. Mi desayuno de siempre'}
@@ -363,11 +387,15 @@ function Constructor({ b, set, t, presupuesto, porId, agregar, cancelar, guardar
           const f = porId.get(it.alimento_id);
           if (!f) return null;
           return (
-            <View key={it.alimento_id} style={s.item}>
+            <View key={`${k}-${it.alimento_id}`} style={s.item}>
               {f.foto_url ? <Image source={{ uri: f.foto_url }} style={s.thumb} /> : <View style={s.thumb} />}
-              <View style={{ flex: 1, minWidth: 0 }}>
+              <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                 <Text style={s.itemNombre} numberOfLines={1}>{f.nombre}</Text>
                 <Text style={s.muted12} numberOfLines={1}>{fq(it.cantidad)} × {f.porcion_base.texto} · {fmt(nutrientes(f, it.cantidad).kcal)} kcal</Text>
+                <View style={{ flexDirection: 'row', gap: 16 }}>
+                  <Pressable onPress={() => reemplazar(k)} hitSlop={8}><Text style={s.accion}>Cambiar</Text></Pressable>
+                  <Pressable onPress={() => set({ ...b, items: b.items.filter((_, j) => j !== k) })} hitSlop={8}><Text style={[s.accion, { color: C.muted }]}>Quitar</Text></Pressable>
+                </View>
               </View>
               <Pressable onPress={() => cambiar(k, -0.5)} style={s.step}><Text style={s.stepTxt}>−</Text></Pressable>
               <Pressable onPress={() => cambiar(k, 0.5)} style={s.step}><Text style={s.stepTxt}>+</Text></Pressable>
@@ -386,10 +414,12 @@ function Constructor({ b, set, t, presupuesto, porId, agregar, cancelar, guardar
       </View>
 
       {error && <Text style={u.error}>{error}</Text>}
+      <Boton texto={`Guardar y usar el ${dia}`} cargando={guardando === 'usar'} desactivado={!b.items.length || guardando !== ''}
+        onPress={async () => { setGuardando('usar'); const e = await guardar(true); setGuardando(''); setError(e); }} />
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <View style={{ flex: 1 }}><Boton texto="Cancelar" tipo="borde" onPress={cancelar} /></View>
-        <View style={{ flex: 2 }}><Boton texto={b.id ? 'Guardar cambios' : 'Guardar opción'} cargando={guardando} desactivado={!b.items.length}
-          onPress={async () => { setGuardando(true); const e = await guardar(); setGuardando(false); setError(e); }} /></View>
+        <View style={{ flex: 1 }}><Boton texto={b.id ? 'Guardar cambios' : 'Solo guardar'} tipo="borde" cargando={guardando === 'guardar'} desactivado={!b.items.length || guardando !== ''}
+          onPress={async () => { setGuardando('guardar'); const e = await guardar(false); setGuardando(''); setError(e); }} /></View>
       </View>
       {borrar && (
         <Boton texto={confirmar ? '¿Seguro? Toca otra vez para eliminarla' : 'Eliminar opción'} tipo="texto"
@@ -435,4 +465,5 @@ const s = StyleSheet.create({
   input: { backgroundColor: C.surface2, borderRadius: 14, minHeight: 50, paddingHorizontal: 16, color: C.text, fontSize: 16, outlineWidth: 0 },
   step: { width: 38, height: 38, borderRadius: 12, backgroundColor: C.surface3, alignItems: 'center', justifyContent: 'center' },
   stepTxt: { fontSize: 18, color: C.text, fontWeight: '600' },
+  accion: { fontSize: 13, fontWeight: '700', color: C.accent },
 });
