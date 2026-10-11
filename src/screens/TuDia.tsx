@@ -118,17 +118,20 @@ function Buscador({ items, valor, otroTexto, onEscoger, onOtro, placeholder, vis
       {valor === 'otro' && otroTexto ? (
         <View style={[s.cuadro, s.cuadroOn, { width: '100%' }]}>
           <Text style={[s.cuadroTxt, { color: C.accent }]}>«{otroTexto}»</Text>
-          <Text style={s.cuadroSub}>Lo que escribiste · toca otra opción para cambiar</Text>
+          <Text style={s.cuadroSub}>Lo que escribiste · para cambiarlo, escribe arriba</Text>
         </View>
       ) : null}
-      <Cuadros<string> opciones={vista.map(it => [it.id, it.nombre, it.ej] as [string, string, string])} valor={valor} onCambio={id => { onEscoger(id); setQ(''); }} />
+      {/* Con «Otro» ya escogido no hace falta la lista: para cambiar, se vuelve a escribir */}
+      {(valor !== 'otro' || q.trim() !== '') && (
+        <Cuadros<string> opciones={vista.map(it => [it.id, it.nombre, it.ej] as [string, string, string])} valor={valor} onCambio={id => { onEscoger(id); setQ(''); }} />
+      )}
       {q.trim() !== '' && (
         <Pressable onPress={() => { onOtro(q.trim()); setQ(''); }} style={[s.cuadro, { width: '100%', borderStyle: 'dashed', borderColor: C.border }]}>
           <Text style={s.cuadroTxt}>{filtrados.length ? 'No es ninguno: usar ' : 'Usar '}«{q.trim()}»</Text>
           <Text style={s.cuadroSub}>Kalo lo reconoce y calcula su gasto</Text>
         </Pressable>
       )}
-      {!q.trim() && filtrados.length > visibles && <Text style={s.cuadroSub}>Hay {filtrados.length - visibles} más: escribe para buscarlas.</Text>}
+      {!q.trim() && valor !== 'otro' && filtrados.length > visibles && <Text style={s.cuadroSub}>Hay {filtrados.length - visibles} más: escribe para buscarlas.</Text>}
     </View>
   );
 }
@@ -333,7 +336,7 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
 
         {pantalla === 'ejercicio' && nuevo && (<>
           <Text style={s.titulo}>Agregar una actividad</Text>
-          <Buscador items={EJERCICIOS.filter(x => x.id !== 'otro').map(x => ({ id: x.id, nombre: x.nombre, ej: '' }))} visibles={6}
+          <Buscador items={EJERCICIOS.filter(x => x.id !== 'otro').map(x => ({ id: x.id, nombre: x.nombre, ej: '' }))} visibles={4}
             valor={nuevo.tipo} otroTexto={nuevo.nombre ?? ''} placeholder="Busca: correr, pesas, cuerda, fútbol…"
             onEscoger={id => setNuevo({ ...nuevo, tipo: id, nombre: undefined })} onOtro={t => setNuevo({ ...nuevo, tipo: 'otro', nombre: t })} />
           <Text style={u.label}>Intensidad</Text>
