@@ -7,12 +7,15 @@ import { useOpciones } from '../data/opciones';
 import { useSesion } from '../data/sesion';
 import { fmt } from '../logic/energia';
 import { C } from '../theme';
+import { Chips } from '../components/ui';
 import { Miniatura, itemsDe, kcalDe } from './Alimentos';
 
 // «¿Ya desayunaste?»: la abre la notificación (o Kalo al abrirse si quedó sin responder)
-export function Pregunta({ momento, fecha, onOpcion, onOtra, onCerrar }: {
+// libre: abierta con el botón «+» → «¿Qué comiste?» con la comida de la hora (se puede cambiar)
+export function Pregunta({ momento, fecha, onOpcion, onOtra, onCerrar, libre, onMomento }: {
   momento: Momento; fecha: string;
   onOpcion: () => void; onOtra: () => void; onCerrar: () => void;
+  libre?: boolean; onMomento?: (m: Momento) => void;
 }) {
   const { activo } = useSesion();
   const { lista } = useAlimentos();
@@ -32,10 +35,20 @@ export function Pregunta({ momento, fecha, onOpcion, onOtra, onCerrar }: {
 
   return (
     <View style={{ gap: 10 }}>
-      <Text style={[s.muted13, { paddingTop: 10 }]}>{m.nombre}{hora ? ` · ${horaTexto(hora)}` : ''}{activo ? ` · ${activo.nombre}` : ''}</Text>
-      <Text style={s.preg}>{m.pregunta}</Text>
-
-      <Text style={s.sep}>Sí, comí…</Text>
+      {libre ? (
+        <>
+          <Text style={[s.muted13, { paddingTop: 10 }]}>Hoy{activo ? ` · ${activo.nombre}` : ''}</Text>
+          <Text style={s.preg}>¿Qué comiste?</Text>
+          <Chips<Momento> opciones={(['des', 'alm', 'snack', 'cena'] as Momento[]).map(x => [x, MOMENTOS[x].nombre] as [Momento, string])} valor={momento} onCambio={x => onMomento?.(x)} />
+          <Text style={s.sep}>Comí…</Text>
+        </>
+      ) : (
+        <>
+          <Text style={[s.muted13, { paddingTop: 10 }]}>{m.nombre}{hora ? ` · ${horaTexto(hora)}` : ''}{activo ? ` · ${activo.nombre}` : ''}</Text>
+          <Text style={s.preg}>{m.pregunta}</Text>
+          <Text style={s.sep}>Sí, comí…</Text>
+        </>
+      )}
       {!lista || !opciones ? <ActivityIndicator color={C.accent} /> : mias.map(o => {
         const its = itemsDe(o, porId);
         return (
@@ -53,17 +66,21 @@ export function Pregunta({ momento, fecha, onOpcion, onOtra, onCerrar }: {
       })}
       <Pressable onPress={onOtra} style={s.opt}>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={s.optTit}>{mias.length ? 'Otra cosa' : 'Sí, contarle qué comí'}</Text>
+          <Text style={s.optTit}>{mias.length ? 'Otra cosa' : libre ? 'Buscar lo que comí' : 'Sí, contarle qué comí'}</Text>
           <Text style={s.muted12}>Buscar alimentos u opciones de Kalo</Text>
         </View>
         <Text style={s.flecha}>›</Text>
       </Pressable>
 
-      <Text style={s.sep}>No…</Text>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        <Pressable onPress={() => no('pospuesto')} disabled={ocupado} style={s.btnNo}><Text style={s.btnNoTxt}>Recuérdame en 30 min</Text></Pressable>
-        <Pressable onPress={() => no('saltado')} disabled={ocupado} style={s.btnNo}><Text style={s.btnNoTxt}>{m.no}</Text></Pressable>
-      </View>
+      {!libre && (
+        <>
+          <Text style={s.sep}>No…</Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Pressable onPress={() => no('pospuesto')} disabled={ocupado} style={s.btnNo}><Text style={s.btnNoTxt}>Recuérdame en 30 min</Text></Pressable>
+            <Pressable onPress={() => no('saltado')} disabled={ocupado} style={s.btnNo}><Text style={s.btnNoTxt}>{m.no}</Text></Pressable>
+          </View>
+        </>
+      )}
       <Pressable onPress={onCerrar} style={{ minHeight: 44, justifyContent: 'center', alignItems: 'center' }}>
         <Text style={s.muted13}>Cerrar</Text>
       </Pressable>

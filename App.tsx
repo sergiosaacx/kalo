@@ -5,7 +5,8 @@ import { StatusBar } from 'expo-status-bar';
 import { LetreroNotificaciones } from './src/components/Notificaciones';
 import { estadoNotif, sincronizarNotificaciones, yaPreguntado } from './src/data/notificaciones';
 import { MOMENTOS, esMomento, pendienteDeHoy, type Momento } from './src/data/comidas';
-import { hoyISO, type ComidaId } from './src/data/plan';
+import { comidaDeAhora, hoyISO, type ComidaId } from './src/data/plan';
+import { IconoGasto, IconoHoy, IconoMas, IconoMenu, IconoPerfil } from './src/components/Iconos';
 import { Pregunta } from './src/screens/Pregunta';
 import { SesionProvider, useSesion } from './src/data/sesion';
 import { Alimentos } from './src/screens/Alimentos';
@@ -20,7 +21,8 @@ import { C } from './src/theme';
 
 const SIMULACRO = Platform.OS === 'web' && typeof window !== 'undefined' && /[?&]simulacro\b/.test(window.location.search);
 
-const TABS = [['hoy', 'Hoy'], ['menu', 'Menú'], ['alimentos', 'Alimentos'], ['gasto', 'Gasto'], ['perfil', 'Perfil']] as const;
+// Barra de abajo (opción E): Hoy · Menú · «+» · Gasto · Perfil. Alimentos se abre desde el «+» y desde Hoy.
+const TABS = [['hoy', 'Hoy', IconoHoy], ['menu', 'Menú', IconoMenu], ['gasto', 'Gasto', IconoGasto], ['perfil', 'Perfil', IconoPerfil]] as const;
 
 export default function App() {
   return (
@@ -52,7 +54,7 @@ function Raiz() {
 
   // «¿Ya desayunaste?»: la abre la notificación (Kalo cerrada: viene en la dirección; abierta: aviso del service worker)
   // o, al abrir Kalo, la comida que se preguntó hoy y quedó sin responder
-  const [pregunta, setPregunta] = useState<{ momento: Momento; fecha: string; perfilId?: string } | null>(null);
+  const [pregunta, setPregunta] = useState<{ momento: Momento; fecha: string; perfilId?: string; libre?: boolean } | null>(null);
   const [registro, setRegistro] = useState<{ momento: Momento; fecha: string; abrirBandeja: boolean } | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   useEffect(() => {
@@ -110,7 +112,8 @@ function Raiz() {
       {/* Alimentos lleva su propio scroll para dejar la bandeja fija abajo */}
       {pregunta ? (
         <ScrollView key="pregunta" style={{ flex: 1 }} contentContainerStyle={s.scroll}>
-          <Pregunta momento={pregunta.momento} fecha={pregunta.fecha} onOpcion={() => anotar(true)} onOtra={() => anotar(false)} onCerrar={() => setPregunta(null)} />
+          <Pregunta momento={pregunta.momento} fecha={pregunta.fecha} libre={pregunta.libre} onMomento={m => setPregunta(x => x && { ...x, momento: m })}
+            onOpcion={() => anotar(true)} onOtra={() => anotar(false)} onCerrar={() => setPregunta(null)} />
         </ScrollView>
       ) : tab === 'alimentos' ? (
         <Alimentos key={(destino ?? '') + (registro?.momento ?? '')} destino={destino} registro={registro} abrirBandeja={registro?.abrirBandeja}
@@ -128,7 +131,7 @@ function Raiz() {
           <Perfil nuevoPerfil={() => setNuevo(true)} />
         ) : (
           <View style={s.pronto}>
-            <Text style={s.prontoTit}>{TABS.find(t => t[0] === tab)?.[1]}</Text>
+            <Text style={s.prontoTit}>{TABS.find(t => t[0] === tab)?.[1] ?? ''}</Text>
             <Text style={s.prontoTxt}>Esta pantalla llega en las próximas entregas.</Text>
           </View>
         )}
@@ -136,12 +139,22 @@ function Raiz() {
       )}
       <SafeAreaView edges={['bottom']} style={s.tabbar}>
         <View style={s.tabs}>
-          {TABS.map(([id, label]) => {
-            const on = tab === id;
+          {[TABS[0], TABS[1], null, TABS[2], TABS[3]].map(tb => {
+            if (!tb) return (
+              <View key="mas" style={s.masCaja}>
+                <Pressable onPress={() => { setRegistro(null); setPregunta({ momento: comidaDeAhora() as Momento, fecha: hoyISO(), libre: true }); }}
+                  style={s.mas} accessibilityLabel="Anotar lo que comí">
+                  <IconoMas color={C.onAccent} />
+                </Pressable>
+              </View>
+            );
+            const [id, label, Icono] = tb;
+            const on = tab === id && !pregunta;
+            const color = on ? C.accent : C.muted;
             return (
               <Pressable key={id} onPress={() => irA(id)} style={s.tab}>
-                <View style={[s.tabMark, { backgroundColor: on ? C.accent : 'transparent' }]} />
-                <Text style={[s.tabTxt, { color: on ? C.text : C.muted }]}>{label}</Text>
+                <Icono color={color} />
+                <Text style={[s.tabTxt, { color }]}>{label}</Text>
               </Pressable>
             );
           })}
@@ -162,7 +175,8 @@ const s = StyleSheet.create({
   prontoTxt: { fontSize: 15, color: C.soft },
   tabbar: { backgroundColor: C.bg, borderTopWidth: 1, borderTopColor: C.divider },
   tabs: { flexDirection: 'row', width: '100%', maxWidth: 520, alignSelf: 'center' },
-  tab: { flex: 1, alignItems: 'center', gap: 6, paddingTop: 0, paddingBottom: 10, minHeight: 52 },
-  tabMark: { width: 24, height: 4, borderRadius: 2 },
-  tabTxt: { fontSize: 12, fontWeight: '600' },
+  tab: { flex: 1, alignItems: 'center', gap: 3, paddingTop: 8, paddingBottom: 6, minHeight: 52 },
+  tabTxt: { fontSize: 11, fontWeight: '600' },
+  masCaja: { width: 70, alignItems: 'center' },
+  mas: { width: 56, height: 56, borderRadius: 28, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center', marginTop: -24, borderWidth: 4, borderColor: C.bg, shadowColor: C.accent, shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 6 } },
 });
