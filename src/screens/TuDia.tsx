@@ -435,7 +435,7 @@ function Resultado({ basal, viejo, r }: { basal: number; viejo: number; r: Rutin
 }
 
 const s = StyleSheet.create({
-  cont: { paddingHorizontal: 18, paddingTop: 14, paddingBottom: 18, gap: 12, maxWidth: 520, width: '100%', alignSelf: 'center' },
+  cont: { paddingHorizontal: 18, paddingTop: 12, paddingBottom: 10, gap: 12, maxWidth: 520, width: '100%', alignSelf: 'center' },
   titulo: { fontSize: 24, fontWeight: '700', letterSpacing: -0.4, color: C.text, lineHeight: 29 },
   pie: { paddingHorizontal: 18, paddingTop: 10, paddingBottom: 14, gap: 8, borderTopWidth: 1, borderTopColor: C.divider, backgroundColor: C.bg, width: '100%', maxWidth: 520, alignSelf: 'center' },
   cuadros: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
