@@ -69,12 +69,17 @@ export const EJERCICIOS: { id: string; nombre: string; met: Record<Intensidad, n
 
 const MET_SUENO = 0.95, MET_ESTUDIO = 1.5, MET_NINOS = 2.5, MET_CASA = 2.8, MET_RESTO = 1.4;
 
-export interface Ejercicio { tipo: string; nombre?: string; intensidad: Intensidad; minutos: number; dias: number }
+// met/reconocido: cuando es «Otro», lo que el catálogo o la IA reconocieron (MET a intensidad moderada)
+export interface Ejercicio { tipo: string; nombre?: string; met?: number; reconocido?: string; intensidad: Intensidad; minutos: number; dias: number }
+const FACTOR_INTENSIDAD: Record<Intensidad, number> = { suave: 0.75, moderada: 1, fuerte: 1.3 };
+export const metEjercicio = (e: Ejercicio) =>
+  e.met ? e.met * FACTOR_INTENSIDAD[e.intensidad] : (EJERCICIOS.find(x => x.id === e.tipo)?.met[e.intensidad] ?? 5);
 export interface Rutina {
   levanta: number; acuesta: number;            // minutos desde medianoche
   ocupacion: Ocupacion;
   oficio: string | null;                       // id de OFICIOS u 'otro'
   oficioOtro: string; oficioComo: string;      // si es 'otro': qué hace y cómo es (TRABAJO_COMO)
+  oficioMet?: number; oficioReconocido?: string; // lo que el catálogo o la IA reconocieron de oficioOtro
   entrada: number; salida: number;             // minutos desde medianoche
   dias: boolean[];                             // lunes … domingo
   transporte: Transporte; trayectoMin: number; // ida y vuelta
@@ -105,7 +110,7 @@ export function gastoPorRutina(basal: number, r: Rutina) {
   const sueno = horasSueno(r);
   const trabaja = r.ocupacion === 'trabajo' || r.ocupacion === 'ambos' || r.ocupacion === 'estudio';
   const metJornada = r.ocupacion === 'estudio' ? MET_ESTUDIO
-    : r.oficio === 'otro' ? (TRABAJO_COMO.find(t => t[0] === r.oficioComo)?.[3] ?? 2.3)
+    : r.oficio === 'otro' ? (r.oficioMet ?? TRABAJO_COMO.find(t => t[0] === r.oficioComo)?.[3] ?? 2.3)
       : (OFICIOS.find(o => o.id === r.oficio)?.met ?? 2.0);
   const diasJornada = trabaja ? r.dias.filter(Boolean).length : 0;
   const jornada = trabaja ? horasJornada(r) : 0;
@@ -118,7 +123,7 @@ export function gastoPorRutina(basal: number, r: Rutina) {
   // Promedio diario de horas por actividad (la jornada solo cuenta los días que se trabaja)
   const hJornada = jornada * diasJornada / 7, hTrans = trayecto * diasJornada / 7;
   const hEj = r.ejercicios.reduce((a, e) => a + e.minutos / 60 * e.dias / 7, 0);
-  const kcalEj = r.ejercicios.reduce((a, e) => a + (EJERCICIOS.find(x => x.id === e.tipo)?.met[e.intensidad] ?? 5) * e.minutos / 60 * e.dias / 7, 0);
+  const kcalEj = r.ejercicios.reduce((a, e) => a + metEjercicio(e) * e.minutos / 60 * e.dias / 7, 0);
   const ocupadas = sueno + hJornada + hTrans + estudioExtra + casa + ninos + hEj;
   const resto = Math.max(0, 24 - ocupadas);
 

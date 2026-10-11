@@ -6,6 +6,7 @@ import {
   type Casa, type Ejercicio, type Intensidad, type Ocupacion, type Rutina, type Transporte,
 } from '../logic/actividad';
 import { fmt, gasto, type Sexo } from '../logic/energia';
+import { reconocer } from '../data/actividades';
 import { C } from '../theme';
 
 type Pantalla = 'datos' | 'sueno' | 'ocupacion' | 'oficio' | 'horario' | 'transporte' | 'estudio' | 'casa' | 'ejercicio' | 'resultado';
@@ -88,6 +89,7 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
   const [i, setI] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [nuevo, setNuevo] = useState<Ejercicio | null>(null);
+  const [revisando, setRevisando] = useState(false);
   const set = (p: Partial<Rutina>) => setR(x => ({ ...x, ...p }));
 
   const pasos = secuencia(r);
@@ -110,7 +112,32 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
     if (pantalla === 'horario' && horasJornada(r) < 1) return 'Revisa la hora de entrada y de salida.';
     return null;
   };
-  const siguiente = () => { const e = validar(); setError(e); if (!e) setI(i + 1); };
+  const siguiente = async () => {
+    const e = validar(); setError(e);
+    if (e) return;
+    // «Otro trabajo»: el catálogo o la IA reconocen lo que escribió, antes de seguir
+    if (pantalla === 'oficio' && r.oficio === 'otro' && r.oficioMet === undefined) {
+      setRevisando(true);
+      const rec = await reconocer(r.oficioOtro, 'trabajo');
+      setRevisando(false);
+      if (rec) set({ oficioMet: rec.met, oficioReconocido: rec.nombre });
+    }
+    setI(i + 1);
+  };
+  const agregarEjercicio = async () => {
+    if (!nuevo) return;
+    if (nuevo.tipo === 'otro' && !nuevo.nombre?.trim()) return setError('Escribe qué actividad haces.');
+    setError(null);
+    let ej = nuevo;
+    if (nuevo.tipo === 'otro') {
+      setRevisando(true);
+      const rec = await reconocer(nuevo.nombre!, 'ejercicio');
+      setRevisando(false);
+      if (rec) ej = { ...nuevo, met: rec.met, reconocido: rec.nombre };
+    }
+    set({ ejercicios: [...r.ejercicios, ej] });
+    setNuevo(null);
+  };
   const atras = () => { setError(null); if (i === 0) onSalir?.(); else setI(i - 1); };
 
   return (
@@ -158,7 +185,9 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
             opciones={[...OFICIOS.map(o => [o.id, o.nombre, o.ej] as [string, string, string]), ['otro', 'Otro trabajo', 'No está en la lista: escríbelo']]} />
           {r.oficio === 'otro' && (
             <View style={[u.card, { gap: 12 }]}>
-              <Campo etiqueta="¿En qué trabajas?" value={r.oficioOtro} onChangeText={v => set({ oficioOtro: v })} placeholder="Ej. fotógrafo, panadero, jardinero" autoFocus />
+              <Campo etiqueta="¿En qué trabajas?" value={r.oficioOtro} onChangeText={v => set({ oficioOtro: v, oficioMet: undefined, oficioReconocido: undefined })}
+                placeholder="Ej. fotógrafo, panadero, jardinero" autoFocus />
+              {r.oficioReconocido && <Text style={s.nota}>Kalo lo reconoce como <Text style={s.notaB}>{r.oficioReconocido}</Text>.</Text>}
               <Text style={u.label}>¿Cómo es tu trabajo la mayor parte del tiempo?</Text>
               <Opciones<string> valor={r.oficioComo} onCambio={v => set({ oficioComo: v })} opciones={TRABAJO_COMO.map(([id, l, ej]) => [id, l, ej])} />
             </View>
@@ -216,6 +245,7 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={s.opcionTxt}>{e.tipo === 'otro' && e.nombre ? e.nombre : EJERCICIOS.find(x => x.id === e.tipo)?.nombre}</Text>
                 <Text style={s.opcionSub}>{e.intensidad} · {e.minutos} min · {e.dias} {e.dias === 1 ? 'día' : 'días'} a la semana</Text>
+                {e.reconocido && <Text style={s.opcionSub}>Kalo lo reconoce como {e.reconocido}</Text>}
               </View>
               <Pressable onPress={() => set({ ejercicios: r.ejercicios.filter((_, j) => j !== k) })} style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
                 <Text style={{ color: C.muted, fontSize: 20 }}>×</Text>
@@ -240,7 +270,7 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
                 opciones={[['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7']]} />
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <View style={{ flex: 1 }}><Boton texto="Cancelar" tipo="borde" onPress={() => setNuevo(null)} /></View>
-                <View style={{ flex: 2 }}><Boton texto="Agregar" onPress={() => { set({ ejercicios: [...r.ejercicios, nuevo] }); setNuevo(null); }} /></View>
+                <View style={{ flex: 2 }}><Boton texto="Agregar" onPress={agregarEjercicio} cargando={revisando} /></View>
               </View>
             </View>
           ) : (
@@ -257,7 +287,7 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
             <View style={{ flex: 1 }}><Boton texto={pantalla === 'resultado' ? 'Volver a empezar' : 'Atrás'} tipo="borde"
               onPress={() => (pantalla === 'resultado' ? (setI(0), setR(RUTINA_INICIAL)) : atras())} /></View>
             {pantalla !== 'resultado' && (
-              <View style={{ flex: 2 }}><Boton texto={pantalla === 'ejercicio' ? (r.ejercicios.length ? 'Ver mi resultado' : 'No hago ejercicio') : 'Continuar'} onPress={siguiente} /></View>
+              <View style={{ flex: 2 }}><Boton texto={pantalla === 'ejercicio' ? (r.ejercicios.length ? 'Ver mi resultado' : 'No hago ejercicio') : 'Continuar'} onPress={siguiente} cargando={revisando} /></View>
             )}
           </View>
         )}
