@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import type { ComidaId } from './src/data/plan';
@@ -9,7 +9,10 @@ import { Entrar } from './src/screens/Entrar';
 import { Hoy } from './src/screens/Hoy';
 import { Onboarding } from './src/screens/Onboarding';
 import { Perfil } from './src/screens/Perfil';
+import { TuDia } from './src/screens/TuDia';
 import { C } from './src/theme';
+
+const SIMULACRO = Platform.OS === 'web' && typeof window !== 'undefined' && /[?&]simulacro\b/.test(window.location.search);
 
 const TABS = [['hoy', 'Hoy'], ['menu', 'Menú'], ['alimentos', 'Alimentos'], ['gasto', 'Gasto'], ['perfil', 'Perfil']] as const;
 
@@ -32,6 +35,8 @@ function Raiz() {
   const [destino, setDestino] = useState<ComidaId | null>(null);
   const [nuevo, setNuevo] = useState(false);
 
+  // …/kalo/?simulacro: el cuestionario «Tu día» para probarlo sin cuenta (no guarda nada)
+  if (SIMULACRO) return <TuDia />;
   if (cargando) return <View style={s.centro}><ActivityIndicator color={C.accent} /></View>;
   if (!sesion) return <Entrar />;
   if (perfiles.length === 0) return <Onboarding primero />;
