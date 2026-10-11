@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Boton, Campo, Chips, Segmento, u } from '../components/ui';
 import {
-  CASA, EJERCICIOS, OFICIOS, RUTINA_INICIAL, TRANSPORTES, gastoPorRutina, hora12, horasJornada, horasSueno,
+  CASA, EJERCICIOS, OFICIOS, RUTINA_INICIAL, TRABAJO_COMO, TRANSPORTES, gastoPorRutina, hora12, horasJornada, horasSueno,
   type Casa, type Ejercicio, type Intensidad, type Ocupacion, type Rutina, type Transporte,
 } from '../logic/actividad';
 import { fmt, gasto, type Sexo } from '../logic/energia';
@@ -40,6 +40,24 @@ function Reloj({ etiqueta, valor, onCambio }: { etiqueta: string; valor: number;
           </Pressable>
         ))}
       </View>
+    </View>
+  );
+}
+
+// Chips de minutos con «Otro» para escribir el número exacto
+function Minutos({ valor, opciones, onCambio }: { valor: number; opciones: number[]; onCambio: (m: number) => void }) {
+  const [otro, setOtro] = useState(!opciones.includes(valor));
+  const [txt, setTxt] = useState(opciones.includes(valor) ? '' : String(valor));
+  const etiqueta = (m: number) => (m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h ${m % 60}` : `${m / 60} ${m === 60 ? 'hora' : 'horas'}`);
+  return (
+    <View style={{ gap: 10 }}>
+      <Chips<string> valor={otro ? 'otro' : String(valor)}
+        onCambio={v => { if (v === 'otro') setOtro(true); else { setOtro(false); onCambio(Number(v)); } }}
+        opciones={[...opciones.map(m => [String(m), etiqueta(m)] as [string, string]), ['otro', 'Otro']]} />
+      {otro && (
+        <Campo etiqueta="¿Cuántos minutos?" unidad="min" value={txt} keyboardType="number-pad" placeholder="Ej. 7" autoFocus
+          onChangeText={v => { setTxt(v); const n = parseInt(v, 10); if (n > 0 && n <= 600) onCambio(n); }} />
+      )}
     </View>
   );
 }
@@ -87,6 +105,7 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
     }
     if (pantalla === 'sueno' && (horasSueno(r) < 3 || horasSueno(r) > 14)) return 'Revisa las horas: así dormirías ' + fq(horasSueno(r)) + ' horas.';
     if (pantalla === 'oficio' && !r.oficio) return 'Escoge el trabajo que más se parezca al tuyo.';
+    if (pantalla === 'oficio' && r.oficio === 'otro' && !r.oficioOtro.trim()) return 'Escribe en qué trabajas.';
     if (pantalla === 'horario' && !r.dias.some(Boolean)) return 'Toca al menos un día.';
     if (pantalla === 'horario' && horasJornada(r) < 1) return 'Revisa la hora de entrada y de salida.';
     return null;
@@ -135,7 +154,15 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
         {pantalla === 'oficio' && (<>
           <Text style={u.h1}>¿En qué trabajas?</Text>
           <Text style={u.soft}>Escoge el que más se parezca a lo que haces la mayor parte del tiempo.</Text>
-          <Opciones<string> valor={r.oficio} onCambio={v => set({ oficio: v })} opciones={OFICIOS.map(o => [o.id, o.nombre, o.ej])} />
+          <Opciones<string> valor={r.oficio} onCambio={v => set({ oficio: v })}
+            opciones={[...OFICIOS.map(o => [o.id, o.nombre, o.ej] as [string, string, string]), ['otro', 'Otro trabajo', 'No está en la lista: escríbelo']]} />
+          {r.oficio === 'otro' && (
+            <View style={[u.card, { gap: 12 }]}>
+              <Campo etiqueta="¿En qué trabajas?" value={r.oficioOtro} onChangeText={v => set({ oficioOtro: v })} placeholder="Ej. fotógrafo, panadero, jardinero" autoFocus />
+              <Text style={u.label}>¿Cómo es tu trabajo la mayor parte del tiempo?</Text>
+              <Opciones<string> valor={r.oficioComo} onCambio={v => set({ oficioComo: v })} opciones={TRABAJO_COMO.map(([id, l, ej]) => [id, l, ej])} />
+            </View>
+          )}
         </>)}
 
         {pantalla === 'horario' && (<>
@@ -161,8 +188,7 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
           <Opciones<Transporte> valor={r.transporte} onCambio={v => set({ transporte: v })} opciones={TRANSPORTES.map(([id, l]) => [id, l])} />
           {r.transporte !== 'casa' && (<>
             <Text style={u.label}>Tiempo de ida y vuelta, sumando los dos</Text>
-            <Chips<string> valor={String(r.trayectoMin)} onCambio={v => set({ trayectoMin: Number(v) })}
-              opciones={[['30', '30 min'], ['60', '1 hora'], ['90', '1 h 30'], ['120', '2 horas'], ['180', '3 horas']]} />
+            <Minutos valor={r.trayectoMin} onCambio={m => set({ trayectoMin: m })} opciones={[10, 15, 30, 45, 60, 90, 120, 180]} />
           </>)}
         </>)}
 
@@ -188,7 +214,7 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
           {r.ejercicios.map((e, k) => (
             <View key={k} style={[u.card, { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14 }]}>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={s.opcionTxt}>{EJERCICIOS.find(x => x.id === e.tipo)?.nombre}</Text>
+                <Text style={s.opcionTxt}>{e.tipo === 'otro' && e.nombre ? e.nombre : EJERCICIOS.find(x => x.id === e.tipo)?.nombre}</Text>
                 <Text style={s.opcionSub}>{e.intensidad} · {e.minutos} min · {e.dias} {e.dias === 1 ? 'día' : 'días'} a la semana</Text>
               </View>
               <Pressable onPress={() => set({ ejercicios: r.ejercicios.filter((_, j) => j !== k) })} style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
@@ -200,13 +226,15 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
             <View style={[u.card, { gap: 12 }]}>
               <Text style={u.label}>¿Qué haces?</Text>
               <Chips<string> valor={nuevo.tipo} onCambio={v => setNuevo({ ...nuevo, tipo: v })} opciones={EJERCICIOS.map(x => [x.id, x.nombre])} />
+              {nuevo.tipo === 'otro' && (
+                <Campo etiqueta="¿Cuál?" value={nuevo.nombre ?? ''} onChangeText={v => setNuevo({ ...nuevo, nombre: v })} placeholder="Ej. escalada, remo, ciclomontañismo" autoFocus />
+              )}
               <Text style={u.label}>¿Con qué intensidad?</Text>
               <Opciones<Intensidad> valor={nuevo.intensidad} onCambio={v => setNuevo({ ...nuevo, intensidad: v })} opciones={[
                 ['suave', 'Suave', 'Puedes ir cantando'], ['moderada', 'Moderada', 'Puedes hablar, pero no cantar'], ['fuerte', 'Fuerte', 'Casi no puedes hablar'],
               ]} />
               <Text style={u.label}>¿Cuánto dura cada vez?</Text>
-              <Chips<string> valor={String(nuevo.minutos)} onCambio={v => setNuevo({ ...nuevo, minutos: Number(v) })}
-                opciones={[['20', '20 min'], ['30', '30 min'], ['45', '45 min'], ['60', '1 hora'], ['90', '1 h 30'], ['120', '2 horas']]} />
+              <Minutos valor={nuevo.minutos} onCambio={m => setNuevo({ ...nuevo, minutos: m })} opciones={[10, 15, 20, 30, 45, 60, 90, 120]} />
               <Text style={u.label}>¿Cuántos días a la semana?</Text>
               <Chips<string> valor={String(nuevo.dias)} onCambio={v => setNuevo({ ...nuevo, dias: Number(v) })}
                 opciones={[['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7']]} />
@@ -248,6 +276,13 @@ function Resultado({ basal, viejo, r }: { basal: number; viejo: number; r: Rutin
       <View style={{ backgroundColor: C.accent, borderRadius: 22, padding: 18, gap: 2 }}>
         <Text style={{ color: C.onAccent, fontSize: 48, fontWeight: '700', letterSpacing: -1.4 }}>{fmt(g.total)} kcal</Text>
         <Text style={{ color: C.onAccent, fontSize: 14 }}>Promedio de la semana, sumando días de trabajo y días libres.</Text>
+      </View>
+      <View style={[u.card, { gap: 4 }]}>
+        <Text style={u.label}>Incluye tu metabolismo basal</Text>
+        <Text style={{ color: C.text, fontSize: 22, fontWeight: '700' }}>{fmt(basal)} kcal</Text>
+        <Text style={{ color: C.muted, fontSize: 13, lineHeight: 19 }}>
+          Es lo que gasta tu cuerpo en reposo total, solo para mantenerte vivo. Las otras {fmt(g.total - basal)} kcal son lo que suman tus actividades del día.
+        </Text>
       </View>
       {g.sobran > 0 && <Text style={u.error}>Tus actividades suman {fq(g.sobran)} horas más que el día. Revisa el horario, el trayecto o el ejercicio.</Text>}
       <View style={[u.card, { gap: 12 }]}>

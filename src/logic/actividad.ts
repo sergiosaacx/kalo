@@ -21,6 +21,18 @@ export const OFICIOS: { id: string; nombre: string; ej: string; met: number }[] 
   { id: 'construccion', nombre: 'Construcción', ej: 'obra, cargue', met: 4.5 },
   { id: 'campo', nombre: 'Campo', ej: 'agricultura, ganadería', met: 4.5 },
   { id: 'seguridad', nombre: 'Seguridad', ej: 'vigilante, portería', met: 1.8 },
+  { id: 'fabrica', nombre: 'Fábrica u operario', ej: 'producción, empaque, máquinas', met: 3.0 },
+  { id: 'taller', nombre: 'Taller', ej: 'mecánico, carpintería, soldadura', met: 3.0 },
+  { id: 'calle', nombre: 'Ventas en la calle', ej: 'puesto ambulante, recorridos a pie', met: 3.0 },
+  { id: 'deporte', nombre: 'Deporte o baile', ej: 'entrenador, profesor de baile', met: 4.0 },
+];
+
+// Si su trabajo no está en la lista: lo describe y escoge cómo es
+export const TRABAJO_COMO: [string, string, string, number][] = [
+  ['sentado', 'Casi siempre sentado', 'computador, escritorio, manejar', 1.5],
+  ['pie', 'De pie la mayor parte', 'atender, cocinar, peluquería', 2.3],
+  ['caminando', 'Caminando casi todo el tiempo', 'recorridos, mensajería a pie, vigilancia en ronda', 3.0],
+  ['pesado', 'Con fuerza o carga pesada', 'cargar, obra, campo', 4.5],
 ];
 
 export const TRANSPORTES: [Transporte, string, number][] = [
@@ -43,16 +55,26 @@ export const EJERCICIOS: { id: string; nombre: string; met: Record<Intensidad, n
   { id: 'natacion', nombre: 'Natación', met: { suave: 5.0, moderada: 7.0, fuerte: 9.8 } },
   { id: 'baile', nombre: 'Baile', met: { suave: 3.5, moderada: 5.0, fuerte: 7.0 } },
   { id: 'yoga', nombre: 'Yoga / pilates', met: { suave: 2.5, moderada: 3.0, fuerte: 4.0 } },
-  { id: 'otro', nombre: 'Otro deporte', met: { suave: 3.5, moderada: 5.0, fuerte: 7.0 } },
+  { id: 'cuerda', nombre: 'Saltar la cuerda', met: { suave: 8.0, moderada: 10.0, fuerte: 12.0 } },
+  { id: 'casa', nombre: 'Pesas o ejercicio en casa', met: { suave: 3.5, moderada: 5.0, fuerte: 8.0 } },
+  { id: 'hiit', nombre: 'Crossfit / HIIT', met: { suave: 6.0, moderada: 8.0, fuerte: 10.0 } },
+  { id: 'eliptica', nombre: 'Elíptica / caminadora', met: { suave: 4.0, moderada: 5.5, fuerte: 7.5 } },
+  { id: 'montana', nombre: 'Caminata en montaña', met: { suave: 4.5, moderada: 6.0, fuerte: 8.0 } },
+  { id: 'escaleras', nombre: 'Subir escaleras', met: { suave: 4.0, moderada: 6.0, fuerte: 9.0 } },
+  { id: 'combate', nombre: 'Boxeo / artes marciales', met: { suave: 5.5, moderada: 7.5, fuerte: 10.0 } },
+  { id: 'raqueta', nombre: 'Tenis / squash / pádel', met: { suave: 5.0, moderada: 7.0, fuerte: 9.0 } },
+  { id: 'patinar', nombre: 'Patinar', met: { suave: 5.0, moderada: 7.0, fuerte: 9.5 } },
+  { id: 'otro', nombre: 'Otro', met: { suave: 3.5, moderada: 5.0, fuerte: 7.0 } },
 ];
 
 const MET_SUENO = 0.95, MET_ESTUDIO = 1.5, MET_NINOS = 2.5, MET_CASA = 2.8, MET_RESTO = 1.4;
 
-export interface Ejercicio { tipo: string; intensidad: Intensidad; minutos: number; dias: number }
+export interface Ejercicio { tipo: string; nombre?: string; intensidad: Intensidad; minutos: number; dias: number }
 export interface Rutina {
   levanta: number; acuesta: number;            // minutos desde medianoche
   ocupacion: Ocupacion;
-  oficio: string | null;
+  oficio: string | null;                       // id de OFICIOS u 'otro'
+  oficioOtro: string; oficioComo: string;      // si es 'otro': qué hace y cómo es (TRABAJO_COMO)
   entrada: number; salida: number;             // minutos desde medianoche
   dias: boolean[];                             // lunes … domingo
   transporte: Transporte; trayectoMin: number; // ida y vuelta
@@ -62,7 +84,7 @@ export interface Rutina {
 }
 
 export const RUTINA_INICIAL: Rutina = {
-  levanta: 6 * 60, acuesta: 22 * 60, ocupacion: 'trabajo', oficio: null, entrada: 8 * 60, salida: 17 * 60,
+  levanta: 6 * 60, acuesta: 22 * 60, ocupacion: 'trabajo', oficio: null, oficioOtro: '', oficioComo: 'pie', entrada: 8 * 60, salida: 17 * 60,
   dias: [true, true, true, true, true, false, false], transporte: 'bus', trayectoMin: 60,
   estudioHoras: 4, estudioDias: 5, casa: 'rato', ninos: false, ejercicios: [],
 };
@@ -82,7 +104,9 @@ export function gastoPorRutina(basal: number, r: Rutina) {
   const porHora = basal / 24;
   const sueno = horasSueno(r);
   const trabaja = r.ocupacion === 'trabajo' || r.ocupacion === 'ambos' || r.ocupacion === 'estudio';
-  const metJornada = r.ocupacion === 'estudio' ? MET_ESTUDIO : (OFICIOS.find(o => o.id === r.oficio)?.met ?? 2.0);
+  const metJornada = r.ocupacion === 'estudio' ? MET_ESTUDIO
+    : r.oficio === 'otro' ? (TRABAJO_COMO.find(t => t[0] === r.oficioComo)?.[3] ?? 2.3)
+      : (OFICIOS.find(o => o.id === r.oficio)?.met ?? 2.0);
   const diasJornada = trabaja ? r.dias.filter(Boolean).length : 0;
   const jornada = trabaja ? horasJornada(r) : 0;
   const [, , metTrans] = TRANSPORTES.find(t => t[0] === r.transporte) ?? TRANSPORTES[2];
