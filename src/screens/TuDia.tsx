@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Boton, Campo, Chips, Segmento, u } from '../components/ui';
 import {
-  CASA, EJERCICIOS, OFICIOS, RUTINA_INICIAL, TRABAJO_COMO, TRANSPORTES, gastoPorRutina, hora12, horasJornada, horasSueno,
-  type Casa, type Ejercicio, type Intensidad, type Ocupacion, type Rutina, type Transporte,
+  CASA, EJERCICIOS, EXTRA_INICIAL, OFICIOS, RESTO, RUTINA_INICIAL, TRABAJO_COMO, TRANSPORTES, gastoPorRutina, hora12, horasEntre, horasJornada, horasSueno,
+  type Casa, type Ejercicio, type Intensidad, type Ocupacion, type Resto, type Rutina, type TrabajoExtra, type Transporte,
 } from '../logic/actividad';
 import { fmt, gasto, type Sexo } from '../logic/energia';
 import { reconocer } from '../data/actividades';
 import { C } from '../theme';
 
-type Pantalla = 'datos' | 'sueno' | 'ocupacion' | 'oficio' | 'horario' | 'transporte' | 'estudio' | 'casa' | 'ejercicio' | 'resultado';
+type Pantalla = 'datos' | 'sueno' | 'ocupacion' | 'oficio' | 'horario' | 'transporte' | 'estudio' | 'extra' | 'extraHorario' | 'casa' | 'resto' | 'ejercicio' | 'resultado';
 const DIAS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 const fq = (n: number) => (Math.round(n * 10) / 10).toLocaleString('es-CO');
 
@@ -18,8 +18,27 @@ function secuencia(r: Rutina): Pantalla[] {
   if (r.ocupacion === 'trabajo' || r.ocupacion === 'ambos') s.push('oficio');
   if (r.ocupacion === 'trabajo' || r.ocupacion === 'ambos' || r.ocupacion === 'estudio') s.push('horario', 'transporte');
   if (r.ocupacion === 'ambos') s.push('estudio');
-  s.push('casa', 'ejercicio', 'resultado');
+  s.push('extra');
+  if (r.extra) s.push('extraHorario');
+  s.push('casa', 'resto', 'ejercicio', 'resultado');
   return s;
+}
+
+// Días de la semana, se tocan para marcar o quitar
+function Dias({ valor, onCambio }: { valor: boolean[]; onCambio: (d: boolean[]) => void }) {
+  return (
+    <View style={[u.card, { gap: 10 }]}>
+      <Text style={u.label}>¿Qué días? Toca para marcar o quitar</Text>
+      <View style={{ flexDirection: 'row', gap: 6 }}>
+        {DIAS.map((d, k) => (
+          <Pressable key={k} onPress={() => onCambio(valor.map((x, j) => (j === k ? !x : x)))}
+            style={[s.dia, valor[k] && { backgroundColor: C.accent, borderColor: C.accent }]}>
+            <Text style={[s.diaTxt, { color: valor[k] ? C.onAccent : C.text }]}>{d}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
 }
 
 // Reloj: la hora sube y baja de una en una; los minutos se escogen con un toque
@@ -91,6 +110,7 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
   const [nuevo, setNuevo] = useState<Ejercicio | null>(null);
   const [revisando, setRevisando] = useState(false);
   const set = (p: Partial<Rutina>) => setR(x => ({ ...x, ...p }));
+  const setExtra = (p: Partial<TrabajoExtra>) => setR(x => ({ ...x, extra: { ...(x.extra ?? EXTRA_INICIAL), ...p } }));
 
   const pasos = secuencia(r);
   const pantalla = pasos[Math.min(i, pasos.length - 1)];
@@ -108,6 +128,10 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
     if (pantalla === 'sueno' && (horasSueno(r) < 3 || horasSueno(r) > 14)) return 'Revisa las horas: así dormirías ' + fq(horasSueno(r)) + ' horas.';
     if (pantalla === 'oficio' && !r.oficio) return 'Escoge el trabajo que más se parezca al tuyo.';
     if (pantalla === 'oficio' && r.oficio === 'otro' && !r.oficioOtro.trim()) return 'Escribe en qué trabajas.';
+    if (pantalla === 'extra' && r.extra && !r.extra.oficio) return 'Escoge qué haces, o toca «No».';
+    if (pantalla === 'extra' && r.extra?.oficio === 'otro' && !r.extra.otro.trim()) return 'Escribe qué haces.';
+    if (pantalla === 'extraHorario' && r.extra && !r.extra.dias.some(Boolean)) return 'Toca al menos un día.';
+    if (pantalla === 'extraHorario' && r.extra && horasEntre(r.extra.entrada, r.extra.salida) < 0.25) return 'Revisa la hora de inicio y de fin.';
     if (pantalla === 'horario' && !r.dias.some(Boolean)) return 'Toca al menos un día.';
     if (pantalla === 'horario' && horasJornada(r) < 1) return 'Revisa la hora de entrada y de salida.';
     return null;
@@ -121,6 +145,12 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
       const rec = await reconocer(r.oficioOtro, 'trabajo');
       setRevisando(false);
       if (rec) set({ oficioMet: rec.met, oficioReconocido: rec.nombre });
+    }
+    if (pantalla === 'extra' && r.extra?.oficio === 'otro' && r.extra.met === undefined) {
+      setRevisando(true);
+      const rec = await reconocer(r.extra.otro, 'trabajo');
+      setRevisando(false);
+      if (rec) setExtra({ met: rec.met, reconocido: rec.nombre });
     }
     setI(i + 1);
   };
@@ -198,17 +228,7 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
           <Text style={u.h1}>{r.ocupacion === 'estudio' ? '¿Qué horario de clases tienes?' : '¿Qué horario tienes?'}</Text>
           <Reloj etiqueta={r.ocupacion === 'estudio' ? 'Entro a clase a las' : 'Entro a las'} valor={r.entrada} onCambio={v => set({ entrada: v })} />
           <Reloj etiqueta="Salgo a las" valor={r.salida} onCambio={v => set({ salida: v })} />
-          <View style={[u.card, { gap: 10 }]}>
-            <Text style={u.label}>¿Qué días? Toca para marcar o quitar</Text>
-            <View style={{ flexDirection: 'row', gap: 6 }}>
-              {DIAS.map((d, k) => (
-                <Pressable key={k} onPress={() => set({ dias: r.dias.map((x, j) => (j === k ? !x : x)) })}
-                  style={[s.dia, r.dias[k] && { backgroundColor: C.accent, borderColor: C.accent }]}>
-                  <Text style={[s.diaTxt, { color: r.dias[k] ? C.onAccent : C.text }]}>{d}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
+          <Dias valor={r.dias} onCambio={d => set({ dias: d })} />
           <Text style={s.nota}><Text style={s.notaB}>{fq(horasJornada(r))} horas</Text>, {r.dias.filter(Boolean).length} días a la semana.</Text>
         </>)}
 
@@ -227,6 +247,39 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
           <Chips<string> valor={String(r.estudioHoras)} onCambio={v => set({ estudioHoras: Number(v) })} opciones={[['2', '2 h'], ['3', '3 h'], ['4', '4 h'], ['6', '6 h']]} />
           <Text style={u.label}>Días a la semana</Text>
           <Chips<string> valor={String(r.estudioDias)} onCambio={v => set({ estudioDias: Number(v) })} opciones={[['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6']]} />
+        </>)}
+
+        {pantalla === 'extra' && (<>
+          <Text style={u.h1}>{r.ocupacion === 'hogar' || r.ocupacion === 'ninguna' ? '¿Haces algún trabajo o negocio aparte?' : '¿Tienes otro trabajo, negocio o proyecto aparte?'}</Text>
+          <Text style={u.soft}>Por ejemplo, un emprendimiento en la noche, clases los sábados o programar desde la casa.</Text>
+          <Segmento<string> opciones={[['no', 'No'], ['si', 'Sí']]} valor={r.extra ? 'si' : 'no'}
+            onCambio={v => set({ extra: v === 'si' ? (r.extra ?? EXTRA_INICIAL) : null })} />
+          {r.extra && (<>
+            <Text style={u.label}>¿Qué haces?</Text>
+            <Opciones<string> valor={r.extra.oficio} onCambio={v => setExtra({ oficio: v })}
+              opciones={[...OFICIOS.map(o => [o.id, o.nombre, o.ej] as [string, string, string]), ['otro', 'Otro', 'No está en la lista: escríbelo']]} />
+            {r.extra.oficio === 'otro' && (
+              <View style={[u.card, { gap: 10 }]}>
+                <Campo etiqueta="¿Qué haces?" value={r.extra.otro} onChangeText={v => setExtra({ otro: v, met: undefined, reconocido: undefined })}
+                  placeholder="Ej. programar, vender por internet, hacer tortas" autoFocus />
+                {r.extra.reconocido && <Text style={s.nota}>Kalo lo reconoce como <Text style={s.notaB}>{r.extra.reconocido}</Text>.</Text>}
+              </View>
+            )}
+          </>)}
+        </>)}
+
+        {pantalla === 'extraHorario' && r.extra && (<>
+          <Text style={u.h1}>¿En qué horario lo haces?</Text>
+          <Reloj etiqueta="Empiezo a las" valor={r.extra.entrada} onCambio={v => setExtra({ entrada: v })} />
+          <Reloj etiqueta="Termino a las" valor={r.extra.salida} onCambio={v => setExtra({ salida: v })} />
+          <Dias valor={r.extra.dias} onCambio={d => setExtra({ dias: d })} />
+          <Text style={s.nota}><Text style={s.notaB}>{fq(horasEntre(r.extra.entrada, r.extra.salida))} horas</Text>, {r.extra.dias.filter(Boolean).length} días a la semana.</Text>
+        </>)}
+
+        {pantalla === 'resto' && (<>
+          <Text style={u.h1}>El resto del tiempo en casa, ¿cómo lo pasas?</Text>
+          <Text style={u.soft}>Lo que queda del día, sin contar el trabajo, el oficio ni el ejercicio.</Text>
+          <Opciones<Resto> valor={r.resto} onCambio={v => set({ resto: v })} opciones={RESTO.map(([id, l, ej]) => [id, l, ej])} />
         </>)}
 
         {pantalla === 'casa' && (<>
@@ -296,7 +349,7 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
   );
 }
 
-const COLORES: Record<string, string> = { sueno: '#6E6C68', jornada: C.accent, estudio: '#F3B193', transporte: C.carbs, casa: C.fat, ejercicio: C.success, resto: '#3A3A3E' };
+const COLORES: Record<string, string> = { sueno: '#6E6C68', jornada: C.accent, extra: '#B85A35', estudio: '#F3B193', transporte: C.carbs, casa: C.fat, ejercicio: C.success, resto: '#3A3A3E' };
 
 function Resultado({ basal, viejo, r }: { basal: number; viejo: number; r: Rutina }) {
   const g = gastoPorRutina(basal, r);

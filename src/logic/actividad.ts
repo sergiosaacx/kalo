@@ -67,7 +67,7 @@ export const EJERCICIOS: { id: string; nombre: string; met: Record<Intensidad, n
   { id: 'otro', nombre: 'Otro', met: { suave: 3.5, moderada: 5.0, fuerte: 7.0 } },
 ];
 
-const MET_SUENO = 0.95, MET_ESTUDIO = 1.5, MET_NINOS = 2.5, MET_CASA = 2.8, MET_RESTO = 1.4;
+const MET_SUENO = 0.95, MET_ESTUDIO = 1.5, MET_NINOS = 2.5, MET_CASA = 2.8;
 
 // met/reconocido: cuando es «Otro», lo que el catálogo o la IA reconocieron (MET a intensidad moderada)
 export interface Ejercicio { tipo: string; nombre?: string; met?: number; reconocido?: string; intensidad: Intensidad; minutos: number; dias: number }
@@ -85,16 +85,32 @@ export interface Rutina {
   transporte: Transporte; trayectoMin: number; // ida y vuelta
   estudioHoras: number; estudioDias: number;   // solo si estudia además de trabajar
   casa: Casa; ninos: boolean;
+  resto: Resto;                                // cómo pasa el resto del tiempo en casa
+  extra: TrabajoExtra | null;                  // segundo trabajo, negocio o proyecto
   ejercicios: Ejercicio[];
 }
+
+export type Resto = 'sentado' | 'mezclado' | 'movimiento';
+export const RESTO: [Resto, string, string, number][] = [
+  ['sentado', 'Casi siempre sentado', 'computador, TV, celular, leer', 1.3],
+  ['mezclado', 'Mezclado', 'un rato sentado y otro moviéndome', 1.7],
+  ['movimiento', 'Casi siempre de pie o moviéndome', 'organizando, con mascotas, haciendo cosas', 2.2],
+];
+
+export interface TrabajoExtra {
+  oficio: string | null;                       // id de OFICIOS u 'otro'
+  otro: string; met?: number; reconocido?: string;
+  entrada: number; salida: number; dias: boolean[];
+}
+export const EXTRA_INICIAL: TrabajoExtra = { oficio: null, otro: '', entrada: 19 * 60, salida: 22 * 60, dias: [true, true, true, true, true, false, false] };
 
 export const RUTINA_INICIAL: Rutina = {
   levanta: 6 * 60, acuesta: 22 * 60, ocupacion: 'trabajo', oficio: null, oficioOtro: '', oficioComo: 'pie', entrada: 8 * 60, salida: 17 * 60,
   dias: [true, true, true, true, true, false, false], transporte: 'bus', trayectoMin: 60,
-  estudioHoras: 4, estudioDias: 5, casa: 'rato', ninos: false, ejercicios: [],
+  estudioHoras: 4, estudioDias: 5, casa: 'rato', ninos: false, resto: 'sentado', extra: null, ejercicios: [],
 };
 
-const horasEntre = (a: number, b: number) => (((b - a) % 1440) + 1440) % 1440 / 60;
+export const horasEntre = (a: number, b: number) => (((b - a) % 1440) + 1440) % 1440 / 60;
 export const horasSueno = (r: Rutina) => horasEntre(r.acuesta, r.levanta);
 export const horasJornada = (r: Rutina) => horasEntre(r.entrada, r.salida);
 export const hora12 = (min: number) => {
@@ -124,17 +140,22 @@ export function gastoPorRutina(basal: number, r: Rutina) {
   const hJornada = jornada * diasJornada / 7, hTrans = trayecto * diasJornada / 7;
   const hEj = r.ejercicios.reduce((a, e) => a + e.minutos / 60 * e.dias / 7, 0);
   const kcalEj = r.ejercicios.reduce((a, e) => a + metEjercicio(e) * e.minutos / 60 * e.dias / 7, 0);
-  const ocupadas = sueno + hJornada + hTrans + estudioExtra + casa + ninos + hEj;
+  const ex = r.extra;
+  const hExtra = ex && ex.oficio ? horasEntre(ex.entrada, ex.salida) * ex.dias.filter(Boolean).length / 7 : 0;
+  const metExtra = ex ? (ex.met ?? OFICIOS.find(o => o.id === ex.oficio)?.met ?? 2.0) : 0;
+  const ocupadas = sueno + hJornada + hTrans + estudioExtra + hExtra + casa + ninos + hEj;
   const resto = Math.max(0, 24 - ocupadas);
+  const [, nombreResto, , metResto] = RESTO.find(x => x[0] === r.resto) ?? RESTO[0];
 
   const partes: Desglose[] = [
     { clave: 'sueno', nombre: 'Sueño', horas: sueno, kcal: sueno * MET_SUENO * porHora },
     { clave: 'jornada', nombre: r.ocupacion === 'estudio' ? 'Estudio' : 'Trabajo', horas: hJornada, kcal: hJornada * metJornada * porHora },
     { clave: 'estudio', nombre: 'Estudio', horas: estudioExtra, kcal: estudioExtra * MET_ESTUDIO * porHora },
+    { clave: 'extra', nombre: ex?.reconocido ?? (ex?.oficio === 'otro' ? ex.otro : OFICIOS.find(o => o.id === ex?.oficio)?.nombre) ?? 'Otro trabajo', horas: hExtra, kcal: hExtra * metExtra * porHora },
     { clave: 'transporte', nombre: 'Transporte', horas: hTrans, kcal: hTrans * metTrans * porHora },
     { clave: 'casa', nombre: 'Oficio y niños', horas: casa + ninos, kcal: (casa * MET_CASA + ninos * MET_NINOS) * porHora },
     { clave: 'ejercicio', nombre: 'Ejercicio', horas: hEj, kcal: kcalEj * porHora },
-    { clave: 'resto', nombre: 'Resto del día en casa', horas: resto, kcal: resto * MET_RESTO * porHora },
+    { clave: 'resto', nombre: `Resto del día: ${nombreResto.replace('Casi siempre ', '').toLowerCase()}`, horas: resto, kcal: resto * metResto * porHora },
   ].filter(p => p.horas > 0.01);
   const total = partes.reduce((a, p) => a + p.kcal, 0);
   return { total: Math.round(total), partes, sobran: ocupadas > 24 ? ocupadas - 24 : 0, nivel: total / basal };
