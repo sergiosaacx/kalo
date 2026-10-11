@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Boton, Campo, FechaNacimiento, Segmento, u } from '../components/ui';
 import { NotificacionesPerfil } from '../components/Notificaciones';
+import { MetaPeso, TarjetaMeta } from './MetaPeso';
 import { useSesion, type PerfilActivo } from '../data/sesion';
 import { edadDe, errorFecha, fechaValida, type Sexo } from '../logic/energia';
 import { C } from '../theme';
@@ -9,7 +10,9 @@ import { C } from '../theme';
 // Perfiles de la familia + datos del perfil activo (handoff › Perfil)
 export function Perfil({ nuevoPerfil }: { nuevoPerfil: () => void }) {
   const { perfiles, activo, activar, actualizarPerfil, borrarPerfil, salir, sesion } = useSesion();
+  const [viendoMeta, setViendoMeta] = useState(false);
   if (!activo) return null;
+  if (viendoMeta) return <MetaPeso key={activo.id} volver={() => setViendoMeta(false)} />;
 
   return (
     <View style={{ gap: 14 }}>
@@ -36,6 +39,8 @@ export function Perfil({ nuevoPerfil }: { nuevoPerfil: () => void }) {
           <Text style={{ color: C.accent, fontSize: 15, fontWeight: '600' }}>+ Nuevo perfil</Text>
         </Pressable>
       </View>
+
+      <TarjetaMeta key={'m' + activo.id} p={activo} abrir={() => setViendoMeta(true)} />
 
       <Datos key={activo.id} p={activo} guardar={cambios => actualizarPerfil(activo.id, cambios)} />
 

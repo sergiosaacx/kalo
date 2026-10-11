@@ -11,6 +11,7 @@ interface PerfilDB {
   id: string; nombre: string; edad: number; sexo: Sexo; estatura_cm: number; peso_kg: number; peso_inicial_kg: number;
   meta: Meta; peso_meta_kg: number; ritmo_kg_semana: number; trabajo: Trabajo; pasos_dia: number; ejercicio_min: number;
   sueno_h: number; color: string; activo: boolean; fecha_nacimiento: string | null; rutina: Rutina | null;
+  ajuste_kcal: number; ajuste_desde: string | null;
 }
 
 const desdeDB = (r: PerfilDB): Perfil & { activo: boolean } => ({
@@ -18,6 +19,7 @@ const desdeDB = (r: PerfilDB): Perfil & { activo: boolean } => ({
   fechaNacimiento: r.fecha_nacimiento ?? undefined, rutina: r.rutina ?? undefined, sexo: r.sexo, estatura: Number(r.estatura_cm), peso: Number(r.peso_kg),
   pesoInicial: Number(r.peso_inicial_kg), meta: r.meta, pesoMeta: Number(r.peso_meta_kg), ritmo: Number(r.ritmo_kg_semana),
   trabajo: r.trabajo, pasos: r.pasos_dia, ejercicio: r.ejercicio_min, sueno: Number(r.sueno_h), color: r.color, activo: r.activo,
+  ajusteKcal: r.ajuste_kcal ?? 0, ajusteDesde: r.ajuste_desde ?? undefined,
 });
 
 const haciaDB = (p: Partial<Perfil>) => {
@@ -38,6 +40,8 @@ const haciaDB = (p: Partial<Perfil>) => {
   if (p.sueno !== undefined) m.sueno_h = p.sueno;
   if (p.color !== undefined) m.color = p.color;
   if (p.rutina !== undefined) m.rutina = p.rutina;
+  if (p.ajusteKcal !== undefined) m.ajuste_kcal = p.ajusteKcal;
+  if (p.ajusteDesde !== undefined) m.ajuste_desde = p.ajusteDesde;
   return m;
 };
 

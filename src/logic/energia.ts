@@ -23,6 +23,8 @@ export interface Perfil {
   sueno: number; // h
   color: string;
   rutina?: Rutina; // «Tu día»: si existe, el gasto se calcula con ella
+  ajusteKcal?: number;   // ajuste aceptado en «Meta de peso» según cómo va el peso
+  ajusteDesde?: string;  // YYYY-MM-DD: desde ahí se vuelve a medir el ritmo real
 }
 
 const TRABAJO_KCAL: Record<Trabajo, number> = { sentado: 0, pie: 180, fisico: 380 };
@@ -60,7 +62,7 @@ export const basalDe = (p: Pick<Perfil, 'peso' | 'estatura' | 'edad' | 'sexo'>) 
 
 export function gasto(p: Perfil) {
   const basal = basalDe(p);
-  const ajuste = p.meta === 'bajar' ? -Math.round(p.ritmo * 1100) : p.meta === 'subir' ? Math.round(p.ritmo * 1100) : 0;
+  const ajuste = (p.meta === 'bajar' ? -Math.round(p.ritmo * 1100) : p.meta === 'subir' ? Math.round(p.ritmo * 1100) : 0) + (p.ajusteKcal ?? 0);
   // Con «Tu día»: método factorial hora por hora (logic/actividad.ts)
   if (p.rutina) {
     const r = gastoPorRutina(basal, p.rutina);
