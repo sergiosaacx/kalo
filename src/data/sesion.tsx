@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { soltarEsteCelular } from './notificaciones';
 import { edadDe, type Meta, type Perfil, type Sexo, type Trabajo } from '../logic/energia';
 import type { Rutina } from '../logic/actividad';
 import { AVATAR_COLORS } from '../theme';
@@ -104,7 +105,7 @@ export function SesionProvider({ children }: { children: React.ReactNode }) {
     return null;
   }, [cargarPerfiles]);
 
-  const salir = useCallback(async () => { await supabase.auth.signOut(); }, []);
+  const salir = useCallback(async () => { await soltarEsteCelular(); await supabase.auth.signOut(); }, []);
 
   const activo = perfiles.find(p => p.activo) ?? perfiles[0] ?? null;
   return (

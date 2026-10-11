@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { Boton, Campo, Chips, FechaNacimiento, Segmento, Stepper, u } from '../components/ui';
 import { useSesion } from '../data/sesion';
+import { TEXTO_NOTIF } from '../components/Notificaciones';
+import { activarNotificaciones, estadoNotif, marcarPreguntado } from '../data/notificaciones';
 import { edadDe, errorFecha, fechaValida, fmt, gasto, type Meta, type Perfil, type Sexo } from '../logic/energia';
 import { TuDia } from './TuDia';
 import { C } from '../theme';
@@ -14,7 +16,8 @@ const INICIAL: Borrador = {
 const fq = (n: number) => (Math.round(n * 10) / 10).toLocaleString('es-CO');
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
-// Registro de un perfil en 4 pasos: Bienvenida → Datos → Tu día → Meta (handoff › Onboarding)
+// Registro de un perfil en 4 pasos: Bienvenida → Datos → Tu día → Meta (handoff › Onboarding).
+// Al registrarse (primer perfil) hay un 5.º paso: activar las notificaciones en este celular.
 export function Onboarding({ primero, onCancelar }: { primero: boolean; onCancelar?: () => void }) {
   const { crearPerfil } = useSesion();
   const [paso, setPaso] = useState(0);
@@ -24,6 +27,10 @@ export function Onboarding({ primero, onCancelar }: { primero: boolean; onCancel
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const set = (p: Partial<Borrador>) => setD(x => ({ ...x, ...p }));
+  // Solo si este celular puede pedir el permiso y aún no lo ha respondido
+  const [conAvisos] = useState(() => primero && estadoNotif() === 'preguntar');
+  const total = conAvisos ? 5 : 4;
+  const ultimo = total - 1;
 
   const num = (k: 'estatura' | 'peso', v: string) => {
     setTxt(t => ({ ...t, [k]: v }));
@@ -51,7 +58,11 @@ export function Onboarding({ primero, onCancelar }: { primero: boolean; onCancel
       // Meta por defecto coherente con el peso escrito
       set({ fechaNacimiento: f, edad: edadDe(f), pesoMeta: d.meta === 'mantener' ? d.peso : d.meta === 'bajar' ? Math.round(d.peso - 5) : Math.round(d.peso + 3) });
     }
-    if (paso < 3) return setPaso(paso + 1);
+    if (paso < ultimo) return setPaso(paso + 1);
+    await crear();
+  };
+
+  const crear = async () => {
     setGuardando(true);
     const err = await crearPerfil({ ...d, nombre: d.nombre.trim(), pesoMeta: d.meta === 'mantener' ? d.peso : d.pesoMeta });
     setGuardando(false);
@@ -73,12 +84,12 @@ export function Onboarding({ primero, onCancelar }: { primero: boolean; onCancel
   return (
     <View style={{ flex: 1 }}>
       <View style={{ height: 4, backgroundColor: C.surface3, marginHorizontal: 18, borderRadius: 2, marginTop: 8 }}>
-        <View style={{ height: 4, width: `${((paso + 1) / 4) * 100}%`, backgroundColor: C.accent, borderRadius: 2 }} />
+        <View style={{ height: 4, width: `${((paso + 1) / total) * 100}%`, backgroundColor: C.accent, borderRadius: 2 }} />
       </View>
       <ScrollView key={paso} style={{ flex: 1 }} contentContainerStyle={{ padding: 18, gap: 16, maxWidth: 520, width: '100%', alignSelf: 'center' }} keyboardShouldPersistTaps="handled">
         {paso === 0 && (
           <View style={{ gap: 14, paddingTop: 30 }}>
-            <Text style={{ fontSize: 13, color: C.muted }}>Paso 1 de 4</Text>
+            <Text style={{ fontSize: 13, color: C.muted }}>Paso 1 de {total}</Text>
             <Text style={[u.h1, { fontSize: 34 }]}>{primero ? 'Bienvenido a Kalo' : 'Nuevo perfil'}</Text>
             <Text style={u.soft}>Con tu estatura, peso, edad y cómo es tu día calculamos cuántas calorías gasta tu cuerpo y cuántas te tocan para llegar a tu meta.</Text>
             <Text style={u.soft}>Después puedes agregar a otras personas de tu familia, cada una con sus propios datos.</Text>
@@ -87,7 +98,7 @@ export function Onboarding({ primero, onCancelar }: { primero: boolean; onCancel
 
         {paso === 1 && (
           <>
-            <Text style={{ fontSize: 13, color: C.muted }}>Paso 2 de 4</Text>
+            <Text style={{ fontSize: 13, color: C.muted }}>Paso 2 de {total}</Text>
             <Text style={u.h1}>Tus datos</Text>
             <Campo etiqueta="Nombre" value={d.nombre} onChangeText={v => set({ nombre: v })} placeholder="¿Cómo te llamas?" autoCapitalize="words" />
             <FechaNacimiento valor={nac} onCambio={setNac} />
@@ -104,7 +115,7 @@ export function Onboarding({ primero, onCancelar }: { primero: boolean; onCancel
 
         {paso === 3 && (
           <>
-            <Text style={{ fontSize: 13, color: C.muted }}>Paso 4 de 4</Text>
+            <Text style={{ fontSize: 13, color: C.muted }}>Paso 4 de {total}</Text>
             <Text style={u.h1}>Tu meta</Text>
             <Segmento<Meta> opciones={[['bajar', 'Bajar'], ['mantener', 'Mantener'], ['subir', 'Subir']]} valor={d.meta}
               onCambio={v => set({ meta: v, pesoMeta: v === 'mantener' ? d.peso : v === 'bajar' ? Math.min(d.pesoMeta, d.peso - 1) : Math.max(d.pesoMeta, d.peso + 1) })} />
@@ -127,6 +138,15 @@ export function Onboarding({ primero, onCancelar }: { primero: boolean; onCancel
           </>
         )}
 
+        {paso === 4 && (
+          <View style={{ gap: 14, paddingTop: 30 }}>
+            <Text style={{ fontSize: 13, color: C.muted }}>Paso 5 de 5</Text>
+            <Text style={[u.h1, { fontSize: 34 }]}>Activa las notificaciones</Text>
+            <Text style={u.soft}>{TEXTO_NOTIF}</Text>
+            <Text style={u.soft}>Al tocar «Activar notificaciones» el celular te pide permiso: toca «Permitir».</Text>
+          </View>
+        )}
+
       </ScrollView>
       {/* Botones fijos abajo: siempre a la vista */}
       <View style={{ paddingHorizontal: 18, paddingTop: 10, paddingBottom: 14, gap: 8, borderTopWidth: 1, borderTopColor: C.divider, width: '100%', maxWidth: 520, alignSelf: 'center' }}>
@@ -135,8 +155,13 @@ export function Onboarding({ primero, onCancelar }: { primero: boolean; onCancel
           {(paso > 0 || onCancelar) && (
             <View style={{ flex: 1 }}><Boton texto={paso === 0 ? 'Cancelar' : 'Atrás'} tipo="borde" onPress={() => (paso === 0 ? onCancelar?.() : setPaso(paso - 1))} /></View>
           )}
-          <View style={{ flex: 2 }}><Boton texto={paso === 3 ? 'Crear perfil' : paso === 0 ? 'Empezar' : 'Continuar'} onPress={siguiente} cargando={guardando} /></View>
+          <View style={{ flex: 2 }}>
+            {paso === 4
+              ? <Boton texto="Activar notificaciones" onPress={async () => { await activarNotificaciones(); await crear(); }} cargando={guardando} />
+              : <Boton texto={paso === ultimo ? 'Crear perfil' : paso === 0 ? 'Empezar' : 'Continuar'} onPress={siguiente} cargando={guardando} />}
+          </View>
         </View>
+        {paso === 4 && <Boton texto="Ahora no" tipo="texto" onPress={() => { marcarPreguntado(); crear(); }} desactivado={guardando} />}
       </View>
     </View>
   );

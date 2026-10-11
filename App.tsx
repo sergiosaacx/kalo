@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { LetreroNotificaciones } from './src/components/Notificaciones';
+import { estadoNotif, sincronizarNotificaciones, yaPreguntado } from './src/data/notificaciones';
 import type { ComidaId } from './src/data/plan';
 import { SesionProvider, useSesion } from './src/data/sesion';
 import { Alimentos } from './src/screens/Alimentos';
@@ -37,6 +39,14 @@ function Raiz() {
   const [destino, setDestino] = useState<ComidaId | null>(null);
   const [nuevo, setNuevo] = useState(false);
   const [editandoDia, setEditandoDia] = useState(false);
+  // Letrero de notificaciones: una vez por celular, si en este celular aún no se ha respondido
+  const [letrero, setLetrero] = useState(false);
+  const listo = !!sesion && perfiles.length > 0;
+  useEffect(() => {
+    if (!listo) return;
+    sincronizarNotificaciones();
+    if (estadoNotif() === 'preguntar' && !yaPreguntado()) setLetrero(true);
+  }, [listo]);
 
   // …/kalo/?simulacro: el cuestionario «Tu día» para probarlo sin cuenta (no guarda nada)
   if (SIMULACRO) return <TuDia />;
@@ -90,6 +100,7 @@ function Raiz() {
           })}
         </View>
       </SafeAreaView>
+      {letrero && <LetreroNotificaciones onCerrar={() => setLetrero(false)} />}
     </>
   );
 }
