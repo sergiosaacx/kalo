@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Boton, Chips, Segmento, u } from '../components/ui';
 import { CATEGORIAS, MINERALES, VITAMINAS, fotoDe, nutrientes, sinTildes, useAlimentos, type AlimentoDB } from '../data/alimentos';
-import { bandeja, useBandeja } from '../data/bandeja';
+import { bandeja, useBandeja, type ItemBandeja } from '../data/bandeja';
+import { tiempoTexto, useOpciones, type Opcion } from '../data/opciones';
 import { COMIDAS, agregarVariosAlPlan, comidaDeAhora, nombreComida, type ComidaId } from '../data/plan';
 import { useSesion } from '../data/sesion';
 import { fmt } from '../logic/energia';
@@ -30,6 +31,11 @@ export function Alimentos({ destino, onAgregado }: { destino: ComidaId | null; o
   const [errorListo, setErrorListo] = useState<string | null>(null);
   // Lo que se va a agregar desde la ficha (cantidad en porciones base + cómo se lee)
   const [elegido, setElegido] = useState<{ cantidad: number; texto: string } | null>(null);
+  // «Mis opciones»: una opción completa entra a la bandeja de una vez
+  const [vista, setVista] = useState<'alimentos' | 'opciones'>('alimentos');
+  const [opcion, setOpcion] = useState<Opcion | null>(null);
+  const { lista: opciones } = useOpciones();
+  const porId = useMemo(() => new Map((lista ?? []).map(a => [a.id, a])), [lista]);
 
   const resultados = useMemo(() => {
     if (!lista) return [];
@@ -67,7 +73,9 @@ export function Alimentos({ destino, onAgregado }: { destino: ComidaId | null; o
               <Text style={s.muted13}>{destino || items.length > 0 ? `Agregando a ${nombre} de hoy` : lista ? `${lista.length} alimentos` : 'Cargando…'}</Text>
               <Text style={s.h1}>Alimentos</Text>
             </View>
+            <Segmento<'alimentos' | 'opciones'> opciones={[['alimentos', 'Alimentos'], ['opciones', 'Mis opciones']]} valor={vista} onCambio={setVista} />
             {items.length > 0 && ultimo && <Text style={s.toast}>{ultimo.texto}</Text>}
+            {vista === 'opciones' ? <ListaOpciones opciones={opciones} comida={comida} porId={porId} abrir={setOpcion} /> : <>
             <TextInput
               value={query} onChangeText={setQuery} placeholder="Busca un alimento: arepa, lulo, pollo…"
               placeholderTextColor={C.muted} style={s.input} autoCorrect={false} />
@@ -111,6 +119,7 @@ export function Alimentos({ destino, onAgregado }: { destino: ComidaId | null; o
                 </View>
               </>
             )}
+            </>}
           </View>
         )}
       </ScrollView>
@@ -140,6 +149,8 @@ export function Alimentos({ destino, onAgregado }: { destino: ComidaId | null; o
           {errorListo && !hoja && <Text style={[u.error, s.bandejaError]}>{errorListo}</Text>}
         </Pressable>
       )}
+
+      {opcion && <HojaOpcion o={opcion} porId={porId} cerrar={() => setOpcion(null)} />}
 
       {hoja && (
         <View style={StyleSheet.absoluteFill}>
@@ -172,6 +183,76 @@ export function Alimentos({ destino, onAgregado }: { destino: ComidaId | null; o
           </View>
         </View>
       )}
+    </View>
+  );
+}
+
+const textoCantidad = (a: AlimentoDB, cantidad: number) =>
+  cantidad === 1 ? a.porcion_base.texto : `${fq(cantidad)} × ${a.porcion_base.texto}`;
+const itemsDe = (o: Opcion, porId: Map<string, AlimentoDB>): ItemBandeja[] => o.items
+  .filter(i => porId.has(i.alimento_id))
+  .map(i => { const a = porId.get(i.alimento_id)!; return { alimento: a, cantidad: i.cantidad, texto: textoCantidad(a, i.cantidad) }; });
+const kcalDe = (its: ItemBandeja[]) => its.reduce((t, it) => t + nutrientes(it.alimento, it.cantidad).kcal, 0);
+
+// Primero las opciones propias («Tuya»), luego las de Kalo; solo las de la comida que se está llenando
+function ListaOpciones({ opciones, comida, porId, abrir }: { opciones: Opcion[] | null; comida: ComidaId; porId: Map<string, AlimentoDB>; abrir: (o: Opcion) => void }) {
+  if (!opciones || porId.size === 0) return <ActivityIndicator color={C.accent} style={{ marginTop: 30 }} />;
+  const deLa = opciones.filter(o => o.comida === comida && o.items.length > 0);
+  const orden = [...deLa.filter(o => o.fuente !== 'kalo'), ...deLa.filter(o => o.fuente === 'kalo')];
+  if (orden.length === 0) return <Text style={s.soft}>No hay opciones de {nombreComida(comida).toLowerCase()} todavía. Puedes crearlas en Menú.</Text>;
+  return (
+    <View style={[s.card, { paddingVertical: 4 }]}>
+      {orden.map((o, i) => {
+        const its = itemsDe(o, porId);
+        return (
+          <Pressable key={o.id} onPress={() => abrir(o)} style={[s.opc, i > 0 && s.rowBorde]}>
+            <View style={s.rowEntre}>
+              <Text style={[s.b15, { flex: 1 }]} numberOfLines={2}>
+                {o.nombre}{o.fuente !== 'kalo' ? <Text style={s.tag}>  Tuya</Text> : null}
+              </Text>
+              <Text style={s.kcal}>{fmt(kcalDe(its))}</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{ flexDirection: 'row' }}>
+                {its.slice(0, 5).map((it, k) => <View key={k} style={[s.miniO, k > 0 && { marginLeft: -9 }]}><Miniatura a={it.alimento} size={28} /></View>)}
+              </View>
+              <Text style={s.muted12}>{its.length} {its.length === 1 ? 'alimento' : 'alimentos'}{o.tiempo_min ? ` · ${tiempoTexto(o.tiempo_min)}` : ''}</Text>
+            </View>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+// La opción abierta: sus alimentos y «Agregar los N a la bandeja»
+function HojaOpcion({ o, porId, cerrar }: { o: Opcion; porId: Map<string, AlimentoDB>; cerrar: () => void }) {
+  const its = itemsDe(o, porId);
+  return (
+    <View style={StyleSheet.absoluteFill}>
+      <Pressable style={s.velo} onPress={cerrar} />
+      <View style={s.hoja}>
+        <View style={s.agarre} />
+        <View style={[s.rowEntre, { alignItems: 'baseline' }]}>
+          <Text style={[s.h1, { fontSize: 21, flex: 1 }]} numberOfLines={2}>{o.nombre}</Text>
+          <Text style={s.muted13}>{fmt(kcalDe(its))} kcal</Text>
+        </View>
+        <ScrollView style={{ maxHeight: 320 }} contentContainerStyle={[s.card, { backgroundColor: C.surface2, paddingVertical: 4 }]}>
+          {its.map((it, i) => (
+            <View key={i} style={[s.row, i > 0 && s.rowBorde]}>
+              <Miniatura a={it.alimento} size={46} />
+              <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                <Text style={s.b15} numberOfLines={1}>{it.alimento.nombre}</Text>
+                <Text style={s.muted12} numberOfLines={1}>{it.texto}</Text>
+              </View>
+              <Text style={s.kcal}>{fmt(nutrientes(it.alimento, it.cantidad).kcal)}</Text>
+            </View>
+          ))}
+        </ScrollView>
+        <Boton texto={its.length === 1 ? 'Agregar a la bandeja' : `Agregar los ${its.length} a la bandeja`}
+          onPress={() => { bandeja.agregarVarios(its, `${o.nombre} · ${its.length} ${its.length === 1 ? 'alimento' : 'alimentos'} en la bandeja`); cerrar(); }} />
+        <Boton texto="Volver" tipo="borde" onPress={cerrar} />
+      </View>
     </View>
   );
 }
@@ -314,4 +395,7 @@ const s = StyleSheet.create({
   agarre: { width: 40, height: 5, borderRadius: 3, backgroundColor: C.border, alignSelf: 'center' },
   quitar: { width: 28, height: 36, alignItems: 'center', justifyContent: 'center' },
   quitarTxt: { color: C.muted, fontSize: 22 },
+  opc: { paddingVertical: 11, gap: 6 },
+  tag: { fontSize: 11, fontWeight: '700', color: C.accent },
+  miniO: { borderRadius: 10, borderWidth: 2, borderColor: C.surface },
 });
