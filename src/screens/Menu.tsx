@@ -6,34 +6,12 @@ import { nutrientes, useAlimentos, type AlimentoDB } from '../data/alimentos';
 import { DIFICULTAD, aplicarAlDia, borrarOpcion, guardarOpcion, tiempoTexto, useOpciones, type Dificultad, type ItemOpcion, type Opcion } from '../data/opciones';
 import { COMIDAS, agregarAlPlan, comidaDeAhora, hoyISO, nombreComida, usePlanDia, type ComidaId } from '../data/plan';
 import { useSesion } from '../data/sesion';
-import { PRESUPUESTO, conSigno, fmt, gasto } from '../logic/energia';
+import { PRESUPUESTO, fmt, gasto, macrosObjetivo } from '../logic/energia';
+import { DIAS_CORTO, MESES, ajuste, desdeISO, diaCorto, diaTexto, fq, sumarDias, totales, type Mapa } from '../logic/menu';
+import { recomendar } from '../logic/recomendar';
 import { C } from '../theme';
+import { Calendario } from './MenuCalendario';
 
-const DIAS_CORTO = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-const DIAS_LARGO = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-const fq = (n: number) => (Math.round(n * 10) / 10).toLocaleString('es-CO');
-const desdeISO = (f: string) => { const [a, m, d] = f.split('-').map(Number); return new Date(a, m - 1, d); };
-const sumarDias = (f: string, n: number) => { const d = desdeISO(f); d.setDate(d.getDate() + n); return hoyISO(d); };
-const diaTexto = (f: string) => { const d = desdeISO(f); return `${DIAS_LARGO[d.getDay()]} ${d.getDate()}`; };
-const diaCorto = (f: string) => { const d = desdeISO(f); return f === hoyISO() ? 'hoy' : `${DIAS_CORTO[d.getDay()].toLowerCase()} ${d.getDate()}`; };
-
-type Mapa = Map<string, AlimentoDB>;
-function totales(items: ItemOpcion[], porId: Mapa) {
-  return items.reduce((a, it) => {
-    const f = porId.get(it.alimento_id);
-    if (!f) return a;
-    const n = nutrientes(f, it.cantidad);
-    a.k += n.kcal; a.p += n.p; a.c += n.c; a.g += n.gr;
-    return a;
-  }, { k: 0, p: 0, c: 0, g: 0 });
-}
-
-// «En tu meta» si queda a ±10 % de lo que le toca a esa comida
-function ajuste(k: number, presupuesto: number) {
-  const d = k - presupuesto;
-  return Math.abs(d) <= presupuesto * 0.1 ? { txt: 'En tu meta', color: C.success } : { txt: `${conSigno(d)} kcal`, color: d > 0 ? C.accentLight : C.muted };
-}
 
 // Nombre automático: «Pollo con arroz y espinaca»
 function nombreAuto(items: ItemOpcion[], porId: Mapa) {
@@ -50,7 +28,9 @@ export function Menu() {
   const { activo } = useSesion();
   const { lista: alimentos } = useAlimentos();
   const { lista: opciones } = useOpciones();
-  const [vista, setVista] = useState<'semana' | 'opciones'>('semana');
+  const [vista, setVista] = useState<'semana' | 'calendario' | 'opciones'>('semana');
+  const [volverA, setVolverA] = useState<'semana' | 'calendario'>('semana'); // a dónde volver tras elegir
+  const [recom, setRecom] = useState<{ comida: ComidaId; semilla: number } | null>(null);
   const [dia, setDia] = useState(hoyISO());
   const [eligiendo, setEligiendo] = useState<ComidaId | null>(null);    // «Cambiar» desde Semana
   const [comidaOp, setComidaOp] = useState<ComidaId>(comidaDeAhora());
@@ -73,9 +53,10 @@ export function Menu() {
     if (e) return mostrarAviso(e);
     await plan.recargar();
     setEligiendo(null);
-    setVista('semana');
+    setVista(volverA);
     mostrarAviso(`Listo: ${o.nombre} en ${nombreComida(comida).toLowerCase()} del ${diaTexto(dia)}.`);
   };
+  const elegirPara = (c: ComidaId, desde: 'semana' | 'calendario') => { setEligiendo(c); setComidaOp(c); setVolverA(desde); setVista('opciones'); };
 
   // Llena las 4 comidas con las opciones que más se acercan a lo que le toca a cada una (varía según el día)
   const armarDia = async () => {
@@ -112,6 +93,73 @@ export function Menu() {
     );
   }
 
+  // ── Recomiéndame: Kalo arma una combinación que cuadre con lo que te toca en esa comida
+  if (recom) {
+    const pres = presupuesto(recom.comida);
+    const r = recomendar(recom.comida, recom.semilla, pres, porId);
+    const obj = macrosObjetivo(activo, objetivo), parte = PRESUPUESTO[recom.comida];
+    const t = r ? totales(r.items, porId) : null;
+    return (
+      <View style={{ gap: 14 }}>
+        <View style={{ gap: 2, paddingTop: 4 }}>
+          <Text style={s.muted13}>Recomendación de {nombreComida(recom.comida).toLowerCase()}</Text>
+          <Text style={u.h1}>{r?.nombre ?? 'Sin combinación'}</Text>
+          {r && <Text style={s.prep}>{tiempoTexto(r.tiempo_min)} · Fácil</Text>}
+        </View>
+        <Chips<ComidaId> opciones={COMIDAS} valor={recom.comida} onCambio={c => setRecom({ comida: c, semilla: recom.semilla + 1 })} />
+        {r && t && (<>
+          <View style={[u.card, { gap: 4, padding: 16 }]}>
+            {r.items.map(it => {
+              const f = porId.get(it.alimento_id)!;
+              return (
+                <View key={it.alimento_id} style={[s.item, { borderTopWidth: 0 }]}>
+                  {f.foto_url ? <Image source={{ uri: f.foto_url }} style={s.foto} /> : <View style={s.foto} />}
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={s.itemNombre} numberOfLines={1}>{f.nombre}</Text>
+                    <Text style={s.muted12}>{it.cantidad === 1 ? f.porcion_base.texto : `${fq(it.cantidad)} × ${f.porcion_base.texto}`}</Text>
+                  </View>
+                  <Text style={s.itemKcal}>{fmt(nutrientes(f, it.cantidad).kcal)}</Text>
+                </View>
+              );
+            })}
+          </View>
+          <View style={[u.card, { gap: 10 }]}>
+            <View style={s.filaEntre}>
+              <Text style={s.kcal}>{fmt(t.k)} <Text style={s.muted13}>de {fmt(pres)} kcal</Text></Text>
+              <Text style={[s.ajuste, { color: ajuste(t.k, pres).color }]}>{ajuste(t.k, pres).txt}</Text>
+            </View>
+            {([['Proteína', t.p, obj.proteina * parte, C.accent], ['Carbohidratos', t.c, obj.carbos * parte, C.carbs], ['Grasa', t.g, obj.grasa * parte, C.fat]] as const).map(([l, v, meta, col]) => (
+              <View key={l} style={{ gap: 5 }}>
+                <View style={s.filaEntre}><Text style={s.itemNombre}>{l}</Text><Text style={s.muted13}>{fmt(v)} g / {fmt(meta)} g</Text></View>
+                <View style={s.track}><View style={[s.fill, { width: `${Math.min(100, (v / meta) * 100)}%`, backgroundColor: col }]} /></View>
+              </View>
+            ))}
+            <Text style={[s.muted13, { lineHeight: 19 }]}>
+              {Math.abs(t.k - pres) <= pres * 0.1 ? `Queda a ${fmt(Math.abs(t.k - pres))} kcal de lo que te toca` : `Queda ${fmt(Math.abs(t.k - pres))} kcal ${t.k > pres ? 'por encima' : 'por debajo'} de lo que te toca`} en {nombreComida(recom.comida).toLowerCase()}. Aporta {fmt(t.p)} g de proteína y {fq(t.fib)} g de fibra.
+            </Text>
+          </View>
+        </>)}
+        <Boton texto="↻ Otra combinación" tipo="borde" onPress={() => setRecom({ ...recom, semilla: recom.semilla + 1 })} />
+        {r && (
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <View style={{ flex: 1 }}><Boton texto="Guardar opción" tipo="borde" onPress={async () => {
+              const e = await guardarOpcion({ comida: recom.comida, nombre: r.nombre, items: r.items, fuente: 'ia', tiempo_min: r.tiempo_min, dificultad: 'facil' });
+              mostrarAviso(e ?? 'Guardada en tus opciones.');
+            }} /></View>
+            <View style={{ flex: 1 }}><Boton texto={`Usar el ${diaCorto(dia)}`} onPress={async () => {
+              const e = await aplicarAlDia(activo.id, dia, eligiendo ?? recom.comida, r.items, r.nombre, null);
+              if (e) return mostrarAviso(e);
+              await plan.recargar(); setRecom(null); setEligiendo(null); setVista(volverA);
+              mostrarAviso(`Listo: ${r.nombre} en tu ${diaTexto(dia)}.`);
+            }} /></View>
+          </View>
+        )}
+        {aviso && <Text style={s.aviso}>{aviso}</Text>}
+        <Boton texto="Volver" tipo="texto" onPress={() => setRecom(null)} />
+      </View>
+    );
+  }
+
   // ── Crear o editar una opción propia
   if (borrador) {
     const t = totales(borrador.items, porId), pres = presupuesto(borrador.comida);
@@ -136,14 +184,17 @@ export function Menu() {
         <Text style={s.muted13}>{eligiendo ? `Eligiendo ${nombreComida(eligiendo).toLowerCase()} para el ${diaTexto(dia)}` : 'Lo que vas a comer'}</Text>
         <Text style={u.h1}>Menú</Text>
       </View>
-      <Segmento<'semana' | 'opciones'> opciones={[['semana', 'Semana'], ['opciones', 'Opciones']]} valor={vista}
+      <Segmento<'semana' | 'calendario' | 'opciones'> opciones={[['semana', 'Semana'], ['calendario', 'Calendario'], ['opciones', 'Opciones']]} valor={vista}
         onCambio={v => { setVista(v); setEligiendo(null); }} />
       {aviso && <Text style={s.aviso}>{aviso}</Text>}
 
       {vista === 'semana' ? (
         <Semana dia={dia} setDia={setDia} plan={plan} porId={porId} objetivo={objetivo} presupuesto={presupuesto} armar={armarDia}
-          cambiar={c => { setEligiendo(c); setComidaOp(c); setVista('opciones'); }}
+          cambiar={c => elegirPara(c, 'semana')}
           agregar={c => setPicker({ destino: 'dia', comida: c })} />
+      ) : vista === 'calendario' ? (
+        <Calendario perfilId={activo.id} dia={dia} setDia={setDia} plan={plan} porId={porId} opciones={opciones ?? []}
+          presupuesto={presupuesto} cambiar={c => elegirPara(c, 'calendario')} />
       ) : (
         <View style={{ gap: 12 }}>
           <Chips<ComidaId> opciones={COMIDAS} valor={eligiendo ?? comidaOp} onCambio={c => { setComidaOp(c); if (eligiendo) setEligiendo(c); }} />
@@ -151,10 +202,11 @@ export function Menu() {
             <Pressable onPress={() => setRapidas(!rapidas)} style={[s.filtro, rapidas && s.filtroOn]}>
               <Text style={[s.filtroTxt, rapidas && { color: C.accent }]}>Rápidas · 20 min o menos</Text>
             </Pressable>
-            <View style={{ flex: 1 }} />
-            <Pressable onPress={() => setBorrador({ comida: eligiendo ?? comidaOp, nombre: '', items: [], tiempo_min: null, dificultad: null })} style={s.crear}>
-              <Text style={s.crearTxt}>+ Crear opción</Text>
-            </Pressable>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <View style={{ flex: 1 }}><Boton texto="+ Crear opción" tipo="borde"
+              onPress={() => setBorrador({ comida: eligiendo ?? comidaOp, nombre: '', items: [], tiempo_min: null, dificultad: null })} /></View>
+            <View style={{ flex: 1 }}><Boton texto="Recomiéndame" onPress={() => setRecom({ comida: eligiendo ?? comidaOp, semilla: Math.floor(Math.random() * 50) + 1 })} /></View>
           </View>
           {(opciones ?? [])
             .filter(o => o.comida === (eligiendo ?? comidaOp) && (!rapidas || (o.tiempo_min !== null && o.tiempo_min <= 20)))
@@ -358,6 +410,7 @@ const s = StyleSheet.create({
   ajuste: { fontSize: 13, fontWeight: '700' },
   filaEntre: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
   mini: { width: 42, height: 42, borderRadius: 10, backgroundColor: C.surface2 },
+  foto: { width: 56, height: 56, borderRadius: 14, backgroundColor: C.surface2 },
   filtro: { minHeight: 36, paddingHorizontal: 12, borderRadius: 18, borderWidth: 1, borderColor: C.border, justifyContent: 'center' },
   filtroOn: { borderColor: C.accent, backgroundColor: '#2A1C16' },
   filtroTxt: { fontSize: 13, fontWeight: '600', color: C.text },

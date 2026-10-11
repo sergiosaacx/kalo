@@ -86,6 +86,20 @@ export async function borrarOpcion(id: string) {
   return error ? 'No pudimos borrarla. Inténtalo de nuevo.' : null;
 }
 
+// Reparte muchas comidas de una vez (calendario automático): 3 llamadas en total, no 3 por comida
+export async function aplicarVarios(perfilId: string, entradas: { fecha: string; comida: ComidaId; items: ItemOpcion[]; nombre: string; opcionId: string | null }[]) {
+  if (!entradas.length) return null;
+  const { data: planes, error } = await supabase.from('plan')
+    .upsert(entradas.map(e => ({ perfil_id: perfilId, fecha: e.fecha, comida: e.comida, opcion_id: e.opcionId, nombre: e.nombre })), { onConflict: 'perfil_id,fecha,comida' })
+    .select('id, fecha, comida');
+  if (error || !planes) return 'No pudimos repartir el menú. Revisa tu conexión.';
+  const idDe = new Map(planes.map(p => [`${p.fecha}|${p.comida}`, p.id as string]));
+  await supabase.from('plan_items').delete().in('plan_id', [...idDe.values()]);
+  const filas = entradas.flatMap(e => e.items.map((i, k) => ({ plan_id: idDe.get(`${e.fecha}|${e.comida}`), alimento_id: i.alimento_id, cantidad: i.cantidad, orden: k })));
+  const { error: e2 } = await supabase.from('plan_items').insert(filas);
+  return e2 ? 'Se repartieron los días, pero no todos los alimentos. Inténtalo de nuevo.' : null;
+}
+
 // Pone una opción (o una lista de alimentos) en una comida de un día. Reemplaza lo que hubiera:
 // los alimentos se COPIAN al plan, así editar el día no cambia la opción original.
 export async function aplicarAlDia(perfilId: string, fecha: string, comida: ComidaId, items: ItemOpcion[], nombre: string | null, opcionId: string | null) {
