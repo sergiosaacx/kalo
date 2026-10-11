@@ -194,22 +194,21 @@ const itemsDe = (o: Opcion, porId: Map<string, AlimentoDB>): ItemBandeja[] => o.
   .map(i => { const a = porId.get(i.alimento_id)!; return { alimento: a, cantidad: i.cantidad, texto: textoCantidad(a, i.cantidad) }; });
 const kcalDe = (its: ItemBandeja[]) => its.reduce((t, it) => t + nutrientes(it.alimento, it.cantidad).kcal, 0);
 
-// Primero las opciones propias («Tuya»), luego las de Kalo; solo las de la comida que se está llenando
+// Solo las opciones propias de esa comida; las de Kalo quedan detrás de un botón para que las propias no se pierdan
 function ListaOpciones({ opciones, comida, porId, abrir }: { opciones: Opcion[] | null; comida: ComidaId; porId: Map<string, AlimentoDB>; abrir: (o: Opcion) => void }) {
+  const [deKalo, setDeKalo] = useState(false);
   if (!opciones || porId.size === 0) return <ActivityIndicator color={C.accent} style={{ marginTop: 30 }} />;
   const deLa = opciones.filter(o => o.comida === comida && o.items.length > 0);
-  const orden = [...deLa.filter(o => o.fuente !== 'kalo'), ...deLa.filter(o => o.fuente === 'kalo')];
-  if (orden.length === 0) return <Text style={s.soft}>No hay opciones de {nombreComida(comida).toLowerCase()} todavía. Puedes crearlas en Menú.</Text>;
-  return (
+  const mias = deLa.filter(o => o.fuente !== 'kalo'), kalo = deLa.filter(o => o.fuente === 'kalo');
+  const nombre = nombreComida(comida).toLowerCase();
+  const tarjeta = (lista: Opcion[]) => (
     <View style={[s.card, { paddingVertical: 4 }]}>
-      {orden.map((o, i) => {
+      {lista.map((o, i) => {
         const its = itemsDe(o, porId);
         return (
           <Pressable key={o.id} onPress={() => abrir(o)} style={[s.opc, i > 0 && s.rowBorde]}>
             <View style={s.rowEntre}>
-              <Text style={[s.b15, { flex: 1 }]} numberOfLines={2}>
-                {o.nombre}{o.fuente !== 'kalo' ? <Text style={s.tag}>  Tuya</Text> : null}
-              </Text>
+              <Text style={[s.b15, { flex: 1 }]} numberOfLines={2}>{o.nombre}</Text>
               <Text style={s.kcal}>{fmt(kcalDe(its))}</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -221,6 +220,20 @@ function ListaOpciones({ opciones, comida, porId, abrir }: { opciones: Opcion[] 
           </Pressable>
         );
       })}
+    </View>
+  );
+  return (
+    <View style={{ gap: 12 }}>
+      {mias.length > 0 ? tarjeta(mias) : <Text style={s.soft}>Aún no tienes opciones de {nombre} guardadas. Puedes crearlas en Menú.</Text>}
+      {kalo.length > 0 && (deKalo ? (
+        <>
+          <View style={s.rowEntre}>
+            <Text style={s.muted13}>Opciones de Kalo</Text>
+            <Pressable onPress={() => setDeKalo(false)} hitSlop={8}><Text style={[s.link, { fontSize: 14 }]}>Ocultar</Text></Pressable>
+          </View>
+          {tarjeta(kalo)}
+        </>
+      ) : <Boton texto={`Ver opciones de Kalo (${kalo.length})`} tipo="borde" onPress={() => setDeKalo(true)} />)}
     </View>
   );
 }
@@ -396,6 +409,5 @@ const s = StyleSheet.create({
   quitar: { width: 28, height: 36, alignItems: 'center', justifyContent: 'center' },
   quitarTxt: { color: C.muted, fontSize: 22 },
   opc: { paddingVertical: 11, gap: 6 },
-  tag: { fontSize: 11, fontWeight: '700', color: C.accent },
   miniO: { borderRadius: 10, borderWidth: 2, borderColor: C.surface },
 });
