@@ -56,11 +56,13 @@ function Raiz() {
   const irA = (t: string) => { setDestino(null); setTab(t); };
   return (
     <>
+      {/* Alimentos lleva su propio scroll para dejar la bandeja fija abajo */}
+      {tab === 'alimentos' ? (
+        <Alimentos key={destino ?? ''} destino={destino} onAgregado={() => irA('hoy')} />
+      ) : (
       <ScrollView key={tab + (destino ?? '')} style={{ flex: 1 }} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
         {tab === 'hoy' ? (
           <Hoy irA={irA} agregarA={c => { setDestino(c); setTab('alimentos'); }} />
-        ) : tab === 'alimentos' ? (
-          <Alimentos destino={destino} onAgregado={() => irA('hoy')} />
         ) : tab === 'menu' ? (
           <Menu />
         ) : tab === 'gasto' ? (
@@ -74,6 +76,7 @@ function Raiz() {
           </View>
         )}
       </ScrollView>
+      )}
       <SafeAreaView edges={['bottom']} style={s.tabbar}>
         <View style={s.tabs}>
           {TABS.map(([id, label]) => {
