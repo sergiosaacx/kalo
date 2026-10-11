@@ -32,6 +32,8 @@
         height: 100%;
         flex: 1;
       }
+      /* Instalada en el iPhone: el alto lo da la pantalla real (ver el script de abajo) */
+      html.instalada, html.instalada body, html.instalada #root { height: var(--alto, 100%); }
       /* Fuente del handoff para todo el texto */
       #root, #root * {
         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -53,6 +55,25 @@
       // Safari en iPhone ignora user-scalable=no: se bloquea el pellizco a mano
       document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
       document.addEventListener('touchmove', function (e) { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
+      // iOS 26 (p. ej. iPhone 16 Pro), con Kalo instalada en inicio, reporta una ventana más bajita que la
+      // pantalla y la barra de pestañas queda flotando con un hueco negro abajo. Instalada, Kalo ocupa
+      // toda la pantalla: se usa el alto real de la pantalla si la ventana dice menos.
+      (function () {
+        var instalada = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+        if (!instalada) return;
+        var raiz = document.documentElement;
+        raiz.classList.add('instalada');
+        function ajustar() {
+          var alto = window.innerHeight;
+          var vertical = window.innerHeight >= window.innerWidth;
+          var pantalla = vertical ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+          if (pantalla > alto + 1) alto = pantalla;
+          raiz.style.setProperty('--alto', alto + 'px');
+        }
+        ajustar();
+        window.addEventListener('resize', ajustar);
+        window.addEventListener('orientationchange', function () { setTimeout(ajustar, 300); });
+      })();
     </script>
   </head>
 
