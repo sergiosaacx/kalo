@@ -21,16 +21,24 @@ function secuencia(r: Rutina): Pantalla[] {
   return s;
 }
 
-// Reloj sencillo: − / + de 15 en 15 minutos
+// Reloj: la hora sube y baja de una en una; los minutos se escogen con un toque
 function Reloj({ etiqueta, valor, onCambio }: { etiqueta: string; valor: number; onCambio: (m: number) => void }) {
-  const mover = (d: number) => onCambio((valor + d + 1440) % 1440);
+  const h = Math.floor(valor / 60), m = valor % 60;
+  const hora = (d: number) => onCambio((((h + d) % 24 + 24) % 24) * 60 + m);
   return (
-    <View style={[u.card, { gap: 10 }]}>
+    <View style={[u.card, { gap: 12 }]}>
       <Text style={u.label}>{etiqueta}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <Pressable onPress={() => mover(-15)} style={u.stepBtn}><Text style={u.stepTxt}>−</Text></Pressable>
+        <Pressable onPress={() => hora(-1)} style={u.stepBtn}><Text style={u.stepTxt}>−</Text></Pressable>
         <Text style={s.hora}>{hora12(valor)}</Text>
-        <Pressable onPress={() => mover(15)} style={u.stepBtn}><Text style={u.stepTxt}>+</Text></Pressable>
+        <Pressable onPress={() => hora(1)} style={u.stepBtn}><Text style={u.stepTxt}>+</Text></Pressable>
+      </View>
+      <View style={{ flexDirection: 'row', gap: 6 }}>
+        {[0, 15, 30, 45].map(mm => (
+          <Pressable key={mm} onPress={() => onCambio(h * 60 + mm)} style={[s.min, m === mm && { backgroundColor: C.accent, borderColor: C.accent }]}>
+            <Text style={[s.minTxt, { color: m === mm ? C.onAccent : C.text }]}>:{String(mm).padStart(2, '0')}</Text>
+          </Pressable>
+        ))}
       </View>
     </View>
   );
@@ -275,6 +283,8 @@ const s = StyleSheet.create({
   opcionTxt: { fontSize: 16, fontWeight: '600', color: C.text },
   opcionSub: { fontSize: 13, color: C.muted, marginTop: 2 },
   radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#4A4A4E' },
+  min: { flex: 1, minHeight: 40, borderRadius: 12, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
+  minTxt: { fontSize: 14, fontWeight: '600' },
   dia: { flex: 1, aspectRatio: 1, maxWidth: 48, borderRadius: 12, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
   diaTxt: { fontSize: 15, fontWeight: '700' },
   nota: { fontSize: 15, color: C.soft },
