@@ -42,6 +42,15 @@ export function fechaValida(dia: string, mes: string, anio: string): string | nu
   return `${a}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
+// Mensaje para la persona si la fecha de nacimiento no sirve (null si está bien)
+export function errorFecha(dia: string, mes: string, anio: string): string | null {
+  if (!dia || !mes || anio.length < 4) return 'Escribe la fecha de nacimiento completa, por ejemplo 15 / 04 / 1995.';
+  const f = fechaValida(dia, mes, anio);
+  if (!f) return 'Esa fecha no existe, revísala.';
+  if (edadDe(f) < 10 || edadDe(f) > 100) return 'Revisa el año de nacimiento.';
+  return null;
+}
+
 export const PRESUPUESTO = { des: 0.25, alm: 0.35, cena: 0.3, snack: 0.1 } as const;
 
 export function gasto(p: Perfil) {

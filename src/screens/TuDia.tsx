@@ -5,7 +5,7 @@ import {
   CASA, EJERCICIOS, EXTRA_INICIAL, OFICIOS, RESTO, RUTINA_INICIAL, TRABAJO_COMO, TRANSPORTES, gastoPorRutina, hora12, horasEntre, horasJornada, horasSueno,
   type Casa, type Ejercicio, type Intensidad, type Ocupacion, type Resto, type Rutina, type TrabajoExtra, type Transporte,
 } from '../logic/actividad';
-import { edadDe, fechaValida, fmt, gasto, type Sexo } from '../logic/energia';
+import { edadDe, errorFecha, fechaValida, fmt, gasto, type Sexo } from '../logic/energia';
 import { reconocer } from '../data/actividades';
 import { C } from '../theme';
 
@@ -177,8 +177,8 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
 
   const validar = (): string | null => {
     if (pantalla === 'datos') {
-      if (!fechaNac) return 'Escribe la fecha de nacimiento completa, por ejemplo 15 / 04 / 1995.';
-      if (edad < 10 || edad > 100) return 'Revisa el año de nacimiento.';
+      const ef = errorFecha(nac.dia, nac.mes, nac.anio);
+      if (ef) return ef;
       if (!(estatura >= 100 && estatura <= 230)) return 'La estatura va en centímetros, por ejemplo 165.';
       if (!(peso >= 30 && peso <= 250)) return 'El peso va en kilos, por ejemplo 65.';
     }

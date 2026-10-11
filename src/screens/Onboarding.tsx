@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { Boton, Campo, Chips, FechaNacimiento, Segmento, Stepper, u } from '../components/ui';
 import { useSesion } from '../data/sesion';
-import { edadDe, fechaValida, fmt, gasto, type Meta, type Perfil, type Sexo, type Trabajo } from '../logic/energia';
+import { edadDe, errorFecha, fechaValida, fmt, gasto, type Meta, type Perfil, type Sexo, type Trabajo } from '../logic/energia';
 import { C } from '../theme';
 
 type Borrador = Omit<Perfil, 'id' | 'color'>;
@@ -33,9 +33,8 @@ export function Onboarding({ primero, onCancelar }: { primero: boolean; onCancel
   const validar = () => {
     if (paso === 1) {
       if (!d.nombre.trim()) return 'Escribe el nombre de esta persona.';
-      const f = fechaValida(nac.dia, nac.mes, nac.anio);
-      if (!f) return 'Escribe la fecha de nacimiento completa, por ejemplo 15 / 04 / 1995.';
-      if (edadDe(f) < 10 || edadDe(f) > 100) return 'Revisa el año de nacimiento.';
+      const ef = errorFecha(nac.dia, nac.mes, nac.anio);
+      if (ef) return ef;
       if (!(d.estatura >= 100 && d.estatura <= 230)) return 'La estatura va en centímetros, por ejemplo 165.';
       if (!(d.peso >= 30 && d.peso <= 250)) return 'El peso va en kilos, por ejemplo 65.';
     }

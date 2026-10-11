@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Boton, Campo, FechaNacimiento, Segmento, u } from '../components/ui';
 import { useSesion, type PerfilActivo } from '../data/sesion';
-import { edadDe, fechaValida, type Sexo } from '../logic/energia';
+import { edadDe, errorFecha, fechaValida, type Sexo } from '../logic/energia';
 import { C } from '../theme';
 
 // Perfiles de la familia + datos del perfil activo (handoff › Perfil)
@@ -58,8 +58,8 @@ function Datos({ p, guardar }: { p: PerfilActivo; guardar: (c: Partial<PerfilAct
   const onGuardar = async () => {
     const estatura = parseFloat(f.estatura), peso = parseFloat(f.peso.replace(',', '.'));
     if (!f.nombre.trim()) return setEstado({ tipo: 'error', txt: 'Escribe un nombre.' });
-    if (!fechaNueva) return setEstado({ tipo: 'error', txt: 'Escribe la fecha de nacimiento completa, por ejemplo 15 / 04 / 1995.' });
-    if (edadDe(fechaNueva) < 10 || edadDe(fechaNueva) > 100) return setEstado({ tipo: 'error', txt: 'Revisa el año de nacimiento.' });
+    const ef = errorFecha(nac.dia, nac.mes, nac.anio);
+    if (ef || !fechaNueva) return setEstado({ tipo: 'error', txt: ef ?? 'Revisa la fecha de nacimiento.' });
     if (!(estatura >= 100 && estatura <= 230)) return setEstado({ tipo: 'error', txt: 'La estatura va en centímetros, por ejemplo 165.' });
     if (!(peso >= 30 && peso <= 250)) return setEstado({ tipo: 'error', txt: 'El peso va en kilos, por ejemplo 65.' });
     setGuardando(true);
