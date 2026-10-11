@@ -149,9 +149,9 @@ export function gastoPorRutina(basal: number, r: Rutina) {
 
   const partes: Desglose[] = [
     { clave: 'sueno', nombre: 'Sueño', horas: sueno, kcal: sueno * MET_SUENO * porHora },
-    { clave: 'jornada', nombre: r.ocupacion === 'estudio' ? 'Estudio' : 'Trabajo', horas: hJornada, kcal: hJornada * metJornada * porHora },
+    { clave: 'jornada', nombre: r.ocupacion === 'estudio' ? 'Estudio' : r.oficio === 'otro' ? (r.oficioOtro.trim() || 'Trabajo') : (OFICIOS.find(o => o.id === r.oficio)?.nombre ?? 'Trabajo'), horas: hJornada, kcal: hJornada * metJornada * porHora },
     { clave: 'estudio', nombre: 'Estudio', horas: estudioExtra, kcal: estudioExtra * MET_ESTUDIO * porHora },
-    { clave: 'extra', nombre: ex?.reconocido ?? (ex?.oficio === 'otro' ? ex.otro : OFICIOS.find(o => o.id === ex?.oficio)?.nombre) ?? 'Otro trabajo', horas: hExtra, kcal: hExtra * metExtra * porHora },
+    { clave: 'extra', nombre: (ex?.oficio === 'otro' ? ex.otro.trim() : OFICIOS.find(o => o.id === ex?.oficio)?.nombre) || 'Otro trabajo', horas: hExtra, kcal: hExtra * metExtra * porHora },
     { clave: 'transporte', nombre: 'Transporte', horas: hTrans, kcal: hTrans * metTrans * porHora },
     { clave: 'casa', nombre: 'Oficio y niños', horas: casa + ninos, kcal: (casa * MET_CASA + ninos * MET_NINOS) * porHora },
     { clave: 'ejercicio', nombre: 'Ejercicio', horas: hEj, kcal: kcalEj * porHora },
