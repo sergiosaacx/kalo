@@ -53,7 +53,7 @@ function Raiz() {
   if (cargando) return <View style={s.centro}><ActivityIndicator color={C.accent} /></View>;
   if (!sesion) return <Entrar />;
   if (perfiles.length === 0) return <Onboarding primero />;
-  if (nuevo) return <Onboarding primero={false} onCancelar={() => setNuevo(false)} />;
+  if (nuevo) return <Onboarding primero={false} onCancelar={() => setNuevo(false)} onCreado={() => { setNuevo(false); setDestino(null); setTab('hoy'); }} />;
   // «Tu día» a pantalla completa desde la pestaña Gasto: al terminar se guarda en el perfil
   if (editandoDia && activo) {
     return (

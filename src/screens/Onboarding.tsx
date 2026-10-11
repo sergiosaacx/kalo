@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { Boton, Campo, Chips, FechaNacimiento, Segmento, Stepper, u } from '../components/ui';
 import { useSesion } from '../data/sesion';
@@ -18,7 +18,7 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', '
 
 // Registro de un perfil en 4 pasos: Bienvenida → Datos → Tu día → Meta (handoff › Onboarding).
 // Al registrarse (primer perfil) hay un 5.º paso: activar las notificaciones en este celular.
-export function Onboarding({ primero, onCancelar }: { primero: boolean; onCancelar?: () => void }) {
+export function Onboarding({ primero, onCancelar, onCreado }: { primero: boolean; onCancelar?: () => void; onCreado?: () => void }) {
   const { crearPerfil } = useSesion();
   const [paso, setPaso] = useState(0);
   const [d, setD] = useState<Borrador>(INICIAL);
@@ -62,11 +62,15 @@ export function Onboarding({ primero, onCancelar }: { primero: boolean; onCancel
     await crear();
   };
 
+  // Un solo envío aunque toquen dos veces; al terminar se cierra el registro (perfiles nuevos de la familia)
+  const enviando = useRef(false);
   const crear = async () => {
+    if (enviando.current) return;
+    enviando.current = true;
     setGuardando(true);
     const err = await crearPerfil({ ...d, nombre: d.nombre.trim(), pesoMeta: d.meta === 'mantener' ? d.peso : d.pesoMeta });
-    setGuardando(false);
-    if (err) setError(err);
+    if (err) { enviando.current = false; setGuardando(false); setError(err); return; }
+    onCreado?.();
   };
 
   const en = gasto({ ...d, id: '', color: '' });
