@@ -60,7 +60,9 @@
       // toda la pantalla: se usa el alto real de la pantalla si la ventana dice menos.
       (function () {
         var instalada = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
-        if (!instalada) return;
+        // Solo iPhone/iPad: en Android la «pantalla» incluye las barras del sistema y la app quedaría más alta que la ventana
+        var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        if (!instalada || !ios) return;
         var raiz = document.documentElement;
         raiz.classList.add('instalada');
         function ajustar() {
