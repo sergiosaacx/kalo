@@ -106,11 +106,12 @@ function Buscador({ items, valor, otroTexto, onEscoger, onOtro, placeholder, vis
   onEscoger: (id: string) => void; onOtro: (texto: string) => void; placeholder: string; visibles?: number;
 }) {
   const [q, setQ] = useState('');
+  const [todos, setTodos] = useState(false);
   const n = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   const filtrados = q.trim() ? items.filter(it => n(`${it.nombre} ${it.ej}`).includes(n(q.trim()))) : items;
   const escogido = items.find(it => it.id === valor);
   // El escogido siempre a la vista, aunque no esté entre los primeros
-  const vista = filtrados.slice(0, visibles);
+  const vista = todos ? filtrados : filtrados.slice(0, visibles);
   if (escogido && !q.trim() && !vista.includes(escogido)) vista[vista.length - 1] = escogido;
   return (
     <View style={{ gap: 10 }}>
@@ -131,7 +132,11 @@ function Buscador({ items, valor, otroTexto, onEscoger, onOtro, placeholder, vis
           <Text style={s.cuadroSub}>Kalo lo reconoce y calcula su gasto</Text>
         </Pressable>
       )}
-      {!q.trim() && valor !== 'otro' && filtrados.length > visibles && <Text style={s.cuadroSub}>Hay {filtrados.length - visibles} más: escribe para buscarlas.</Text>}
+      {(valor !== 'otro' || q.trim() !== '') && filtrados.length > visibles && (
+        <Pressable onPress={() => setTodos(!todos)} style={s.verMas}>
+          <Text style={s.verMasTxt}>{todos ? 'Ver menos' : `Ver más (${filtrados.length - visibles})`}</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -446,6 +451,8 @@ const s = StyleSheet.create({
   cuadroOn: { borderColor: C.accent, backgroundColor: '#2A1C16' },
   cuadroTxt: { fontSize: 14, fontWeight: '600', color: C.text },
   cuadroSub: { fontSize: 12, color: C.muted, marginTop: 1 },
+  verMas: { alignSelf: 'flex-start', minHeight: 36, paddingHorizontal: 14, borderRadius: 18, borderWidth: 1, borderColor: C.border, justifyContent: 'center' },
+  verMasTxt: { fontSize: 13, fontWeight: '600', color: C.accent },
   buscar: { backgroundColor: C.surface2, borderRadius: 14, minHeight: 46, paddingHorizontal: 14, color: C.text, fontSize: 15 },
   barra: { height: 4, backgroundColor: C.surface3, marginHorizontal: 18, borderRadius: 2, marginTop: 8 },
   barraFill: { height: 4, backgroundColor: C.accent, borderRadius: 2 },
