@@ -470,7 +470,7 @@ const s = StyleSheet.create({
   cuadroSub: { fontSize: 12, color: C.muted, marginTop: 1 },
   verMas: { alignSelf: 'flex-start', minHeight: 36, paddingHorizontal: 14, borderRadius: 18, borderWidth: 1, borderColor: C.border, justifyContent: 'center' },
   verMasTxt: { fontSize: 13, fontWeight: '600', color: C.accent },
-  buscar: { backgroundColor: C.surface2, borderRadius: 14, minHeight: 46, paddingHorizontal: 14, color: C.text, fontSize: 15 },
+  buscar: { backgroundColor: C.surface2, borderRadius: 14, minHeight: 46, paddingHorizontal: 14, color: C.text, fontSize: 16, outlineWidth: 0 },
   barra: { height: 4, backgroundColor: C.surface3, marginHorizontal: 18, borderRadius: 2, marginTop: 8 },
   barraFill: { height: 4, backgroundColor: C.accent, borderRadius: 2 },
   paso: { fontSize: 13, color: C.muted },

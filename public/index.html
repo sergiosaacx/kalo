@@ -3,7 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- Sin zoom: ni pellizcando ni con doble toque -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <title>Kalo</title>
     <!-- PWA: se instala desde Safari con Compartir → Agregar a inicio -->
     <link rel="manifest" href="./manifest.json" />
@@ -35,7 +36,24 @@
       #root, #root * {
         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
       }
+      /* Sin zoom por doble toque */
+      html, body, #root { touch-action: manipulation; }
+      /* Safari pinta de amarillo los campos que autocompleta: se dejan con los colores de Kalo */
+      input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus {
+        -webkit-text-fill-color: #F4F2EF;
+        caret-color: #F4F2EF;
+        -webkit-box-shadow: 0 0 0 1000px #212125 inset;
+        box-shadow: 0 0 0 1000px #212125 inset;
+        transition: background-color 9999s ease-out 0s;
+      }
+      /* Con letra de menos de 16 px el iPhone se acerca solo al escribir */
+      input, textarea { font-size: 16px !important; }
     </style>
+    <script>
+      // Safari en iPhone ignora user-scalable=no: se bloquea el pellizco a mano
+      document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
+      document.addEventListener('touchmove', function (e) { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
+    </script>
   </head>
 
   <body>

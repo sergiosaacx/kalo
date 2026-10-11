@@ -165,7 +165,7 @@ const s = StyleSheet.create({
   b15: { fontSize: 15, fontWeight: '600', color: C.text },
   kcal: { fontSize: 15, fontWeight: '700', color: C.text },
   link: { fontSize: 15, fontWeight: '600', color: C.accent },
-  input: { backgroundColor: C.surface2, borderRadius: 14, minHeight: 48, paddingHorizontal: 16, color: C.text, fontSize: 15 },
+  input: { backgroundColor: C.surface2, borderRadius: 14, minHeight: 48, paddingHorizontal: 16, color: C.text, fontSize: 16, outlineWidth: 0 },
   card: { backgroundColor: C.surface, borderRadius: 22, padding: 16 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
   rowBorde: { borderTopWidth: 1, borderTopColor: C.divider },
