@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Boton, Campo, Chips, Segmento, u } from '../components/ui';
 import {
   CASA, EJERCICIOS, EXTRA_INICIAL, OFICIOS, RESTO, RUTINA_INICIAL, TRABAJO_COMO, TRANSPORTES, gastoPorRutina, hora12, horasEntre, horasJornada, horasSueno,
@@ -46,7 +46,7 @@ function Reloj({ etiqueta, valor, onCambio }: { etiqueta: string; valor: number;
   const h = Math.floor(valor / 60), m = valor % 60;
   const hora = (d: number) => onCambio((((h + d) % 24 + 24) % 24) * 60 + m);
   return (
-    <View style={[u.card, { gap: 12 }]}>
+    <View style={[u.card, { gap: 8, padding: 14 }]}>
       <Text style={u.label}>{etiqueta}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <Pressable onPress={() => hora(-1)} style={u.stepBtn}><Text style={u.stepTxt}>−</Text></Pressable>
@@ -78,6 +78,57 @@ function Minutos({ valor, opciones, onCambio }: { valor: number; opciones: numbe
         <Campo etiqueta="¿Cuántos minutos?" unidad="min" value={txt} keyboardType="number-pad" placeholder="Ej. 7" autoFocus
           onChangeText={v => { setTxt(v); const n = parseInt(v, 10); if (n > 0 && n <= 600) onCambio(n); }} />
       )}
+    </View>
+  );
+}
+
+// Cuadros en dos columnas (opciones cortas de una sola respuesta)
+function Cuadros<T extends string>({ opciones, valor, onCambio }: { opciones: [T, string, string?][]; valor: T | null; onCambio: (v: T) => void }) {
+  return (
+    <View style={s.cuadros}>
+      {opciones.map(([id, l, sub]) => {
+        const on = id === valor;
+        return (
+          <Pressable key={id} onPress={() => onCambio(id)} style={[s.cuadro, on && s.cuadroOn]}>
+            <Text style={[s.cuadroTxt, on && { color: C.accent }]} numberOfLines={2}>{l}</Text>
+            {sub ? <Text style={s.cuadroSub} numberOfLines={1}>{sub}</Text> : null}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+// Buscador para listas largas: muestra pocas opciones a la vez y, si no está, deja usar lo escrito.
+// Así la lista puede crecer sin que la pantalla crezca.
+function Buscador({ items, valor, otroTexto, onEscoger, onOtro, placeholder, visibles = 8 }: {
+  items: { id: string; nombre: string; ej: string }[]; valor: string | null; otroTexto: string;
+  onEscoger: (id: string) => void; onOtro: (texto: string) => void; placeholder: string; visibles?: number;
+}) {
+  const [q, setQ] = useState('');
+  const n = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const filtrados = q.trim() ? items.filter(it => n(`${it.nombre} ${it.ej}`).includes(n(q.trim()))) : items;
+  const escogido = items.find(it => it.id === valor);
+  // El escogido siempre a la vista, aunque no esté entre los primeros
+  const vista = filtrados.slice(0, visibles);
+  if (escogido && !q.trim() && !vista.includes(escogido)) vista[vista.length - 1] = escogido;
+  return (
+    <View style={{ gap: 10 }}>
+      <TextInput value={q} onChangeText={setQ} placeholder={placeholder} placeholderTextColor={C.muted} style={s.buscar} autoCorrect={false} />
+      {valor === 'otro' && otroTexto ? (
+        <View style={[s.cuadro, s.cuadroOn, { width: '100%' }]}>
+          <Text style={[s.cuadroTxt, { color: C.accent }]}>«{otroTexto}»</Text>
+          <Text style={s.cuadroSub}>Lo que escribiste · toca otra opción para cambiar</Text>
+        </View>
+      ) : null}
+      <Cuadros<string> opciones={vista.map(it => [it.id, it.nombre, it.ej] as [string, string, string])} valor={valor} onCambio={id => { onEscoger(id); setQ(''); }} />
+      {q.trim() !== '' && (
+        <Pressable onPress={() => { onOtro(q.trim()); setQ(''); }} style={[s.cuadro, { width: '100%', borderStyle: 'dashed', borderColor: C.border }]}>
+          <Text style={s.cuadroTxt}>{filtrados.length ? 'No es ninguno: usar ' : 'Usar '}«{q.trim()}»</Text>
+          <Text style={s.cuadroSub}>Kalo lo reconoce y calcula su gasto</Text>
+        </Pressable>
+      )}
+      {!q.trim() && filtrados.length > visibles && <Text style={s.cuadroSub}>Hay {filtrados.length - visibles} más: escribe para buscarlas.</Text>}
     </View>
   );
 }
@@ -175,11 +226,11 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
       {pantalla !== 'resultado' && (
         <View style={s.barra}><View style={[s.barraFill, { width: `${((i + 1) / total) * 100}%` }]} /></View>
       )}
-      <ScrollView key={pantalla} contentContainerStyle={s.cont} keyboardShouldPersistTaps="handled">
+      <ScrollView key={pantalla + (nuevo ? '-nuevo' : '')} style={{ flex: 1 }} contentContainerStyle={s.cont} keyboardShouldPersistTaps="handled">
         {pantalla !== 'resultado' && <Text style={s.paso}>Pregunta {i + 1} de {total}</Text>}
 
         {pantalla === 'datos' && (<>
-          <Text style={u.h1}>Primero, tus datos</Text>
+          <Text style={s.titulo}>Primero, tus datos</Text>
           <Text style={u.soft}>Con esto sabemos cuánto gasta tu cuerpo en reposo.</Text>
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <View style={{ flex: 1 }}><Campo etiqueta="Edad" unidad="años" value={datos.edad} onChangeText={v => setDatos({ ...datos, edad: v })} keyboardType="number-pad" /></View>
@@ -193,7 +244,7 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
         </>)}
 
         {pantalla === 'sueno' && (<>
-          <Text style={u.h1}>¿A qué hora te levantas y a qué hora te acuestas?</Text>
+          <Text style={s.titulo}>¿A qué hora te levantas y a qué hora te acuestas?</Text>
           <Text style={u.soft}>Piensa en un día normal entre semana.</Text>
           <Reloj etiqueta="Me levanto a las" valor={r.levanta} onCambio={v => set({ levanta: v })} />
           <Reloj etiqueta="Me acuesto a las" valor={r.acuesta} onCambio={v => set({ acuesta: v })} />
@@ -201,7 +252,7 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
         </>)}
 
         {pantalla === 'ocupacion' && (<>
-          <Text style={u.h1}>¿Trabajas o estudias?</Text>
+          <Text style={s.titulo}>¿Trabajas o estudias?</Text>
           <Opciones<Ocupacion> valor={r.ocupacion} onCambio={v => set({ ocupacion: v, casa: v === 'hogar' ? 'todo' : r.casa })} opciones={[
             ['trabajo', 'Trabajo'], ['estudio', 'Estudio'], ['ambos', 'Trabajo y estudio'],
             ['hogar', 'Me dedico al hogar'], ['ninguna', 'Pensionado o sin trabajo ahora'],
@@ -209,23 +260,19 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
         </>)}
 
         {pantalla === 'oficio' && (<>
-          <Text style={u.h1}>¿En qué trabajas?</Text>
-          <Text style={u.soft}>Escoge el que más se parezca a lo que haces la mayor parte del tiempo.</Text>
-          <Opciones<string> valor={r.oficio} onCambio={v => set({ oficio: v })}
-            opciones={[...OFICIOS.map(o => [o.id, o.nombre, o.ej] as [string, string, string]), ['otro', 'Otro trabajo', 'No está en la lista: escríbelo']]} />
-          {r.oficio === 'otro' && (
-            <View style={[u.card, { gap: 12 }]}>
-              <Campo etiqueta="¿En qué trabajas?" value={r.oficioOtro} onChangeText={v => set({ oficioOtro: v, oficioMet: undefined, oficioReconocido: undefined })}
-                placeholder="Ej. fotógrafo, panadero, jardinero" autoFocus />
-              {r.oficioReconocido && <Text style={s.nota}>Kalo lo reconoce como <Text style={s.notaB}>{r.oficioReconocido}</Text>.</Text>}
-              <Text style={u.label}>¿Cómo es tu trabajo la mayor parte del tiempo?</Text>
-              <Opciones<string> valor={r.oficioComo} onCambio={v => set({ oficioComo: v })} opciones={TRABAJO_COMO.map(([id, l, ej]) => [id, l, ej])} />
-            </View>
-          )}
+          <Text style={s.titulo}>¿En qué trabajas?</Text>
+          <Buscador items={OFICIOS} valor={r.oficio} otroTexto={r.oficioOtro} placeholder="Busca tu trabajo: mesero, conductor…"
+            onEscoger={id => set({ oficio: id })}
+            onOtro={t => set({ oficio: 'otro', oficioOtro: t, oficioMet: undefined, oficioReconocido: undefined })} />
+          {r.oficio === 'otro' && (<>
+            {r.oficioReconocido && <Text style={s.nota}>Kalo lo reconoce como <Text style={s.notaB}>{r.oficioReconocido}</Text>.</Text>}
+            <Text style={u.label}>¿Cómo es ese trabajo la mayor parte del tiempo?</Text>
+            <Cuadros<string> valor={r.oficioComo} onCambio={v => set({ oficioComo: v })} opciones={TRABAJO_COMO.map(([id, l]) => [id, l])} />
+          </>)}
         </>)}
 
         {pantalla === 'horario' && (<>
-          <Text style={u.h1}>{r.ocupacion === 'estudio' ? '¿Qué horario de clases tienes?' : '¿Qué horario tienes?'}</Text>
+          <Text style={s.titulo}>{r.ocupacion === 'estudio' ? '¿Qué horario de clases tienes?' : '¿Qué horario tienes?'}</Text>
           <Reloj etiqueta={r.ocupacion === 'estudio' ? 'Entro a clase a las' : 'Entro a las'} valor={r.entrada} onCambio={v => set({ entrada: v })} />
           <Reloj etiqueta="Salgo a las" valor={r.salida} onCambio={v => set({ salida: v })} />
           <Dias valor={r.dias} onCambio={d => set({ dias: d })} />
@@ -233,8 +280,8 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
         </>)}
 
         {pantalla === 'transporte' && (<>
-          <Text style={u.h1}>¿Cómo llegas y cuánto te demoras?</Text>
-          <Opciones<Transporte> valor={r.transporte} onCambio={v => set({ transporte: v })} opciones={TRANSPORTES.map(([id, l]) => [id, l])} />
+          <Text style={s.titulo}>¿Cómo llegas y cuánto te demoras?</Text>
+          <Cuadros<Transporte> valor={r.transporte} onCambio={v => set({ transporte: v })} opciones={TRANSPORTES.map(([id, l]) => [id, l])} />
           {r.transporte !== 'casa' && (<>
             <Text style={u.label}>Tiempo de ida y vuelta, sumando los dos</Text>
             <Minutos valor={r.trayectoMin} onCambio={m => set({ trayectoMin: m })} opciones={[10, 15, 30, 45, 60, 90, 120, 180]} />
@@ -242,7 +289,7 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
         </>)}
 
         {pantalla === 'estudio' && (<>
-          <Text style={u.h1}>¿Cuánto estudias?</Text>
+          <Text style={s.titulo}>¿Cuánto estudias?</Text>
           <Text style={u.label}>Horas de estudio al día (clases y tareas)</Text>
           <Chips<string> valor={String(r.estudioHoras)} onCambio={v => set({ estudioHoras: Number(v) })} opciones={[['2', '2 h'], ['3', '3 h'], ['4', '4 h'], ['6', '6 h']]} />
           <Text style={u.label}>Días a la semana</Text>
@@ -250,26 +297,20 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
         </>)}
 
         {pantalla === 'extra' && (<>
-          <Text style={u.h1}>{r.ocupacion === 'hogar' || r.ocupacion === 'ninguna' ? '¿Haces algún trabajo o negocio aparte?' : '¿Tienes otro trabajo, negocio o proyecto aparte?'}</Text>
-          <Text style={u.soft}>Por ejemplo, un emprendimiento en la noche, clases los sábados o programar desde la casa.</Text>
+          <Text style={s.titulo}>{r.ocupacion === 'hogar' || r.ocupacion === 'ninguna' ? '¿Haces algún trabajo o negocio aparte?' : '¿Tienes otro trabajo, negocio o proyecto aparte?'}</Text>
+          {!r.extra && <Text style={u.soft}>Por ejemplo, un emprendimiento en la noche, clases los sábados o programar desde la casa.</Text>}
           <Segmento<string> opciones={[['no', 'No'], ['si', 'Sí']]} valor={r.extra ? 'si' : 'no'}
             onCambio={v => set({ extra: v === 'si' ? (r.extra ?? EXTRA_INICIAL) : null })} />
           {r.extra && (<>
-            <Text style={u.label}>¿Qué haces?</Text>
-            <Opciones<string> valor={r.extra.oficio} onCambio={v => setExtra({ oficio: v })}
-              opciones={[...OFICIOS.map(o => [o.id, o.nombre, o.ej] as [string, string, string]), ['otro', 'Otro', 'No está en la lista: escríbelo']]} />
-            {r.extra.oficio === 'otro' && (
-              <View style={[u.card, { gap: 10 }]}>
-                <Campo etiqueta="¿Qué haces?" value={r.extra.otro} onChangeText={v => setExtra({ otro: v, met: undefined, reconocido: undefined })}
-                  placeholder="Ej. programar, vender por internet, hacer tortas" autoFocus />
-                {r.extra.reconocido && <Text style={s.nota}>Kalo lo reconoce como <Text style={s.notaB}>{r.extra.reconocido}</Text>.</Text>}
-              </View>
-            )}
+            <Buscador items={OFICIOS} valor={r.extra.oficio} otroTexto={r.extra.otro} visibles={6} placeholder="¿Qué haces? Ej. programar, vender por internet"
+              onEscoger={id => setExtra({ oficio: id })}
+              onOtro={t => setExtra({ oficio: 'otro', otro: t, met: undefined, reconocido: undefined })} />
+            {r.extra.reconocido && <Text style={s.nota}>Kalo lo reconoce como <Text style={s.notaB}>{r.extra.reconocido}</Text>.</Text>}
           </>)}
         </>)}
 
         {pantalla === 'extraHorario' && r.extra && (<>
-          <Text style={u.h1}>¿En qué horario lo haces?</Text>
+          <Text style={s.titulo}>¿En qué horario lo haces?</Text>
           <Reloj etiqueta="Empiezo a las" valor={r.extra.entrada} onCambio={v => setExtra({ entrada: v })} />
           <Reloj etiqueta="Termino a las" valor={r.extra.salida} onCambio={v => setExtra({ salida: v })} />
           <Dias valor={r.extra.dias} onCambio={d => setExtra({ dias: d })} />
@@ -277,21 +318,36 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
         </>)}
 
         {pantalla === 'resto' && (<>
-          <Text style={u.h1}>El resto del tiempo en casa, ¿cómo lo pasas?</Text>
+          <Text style={s.titulo}>El resto del tiempo en casa, ¿cómo lo pasas?</Text>
           <Text style={u.soft}>Lo que queda del día, sin contar el trabajo, el oficio ni el ejercicio.</Text>
           <Opciones<Resto> valor={r.resto} onCambio={v => set({ resto: v })} opciones={RESTO.map(([id, l, ej]) => [id, l, ej])} />
         </>)}
 
         {pantalla === 'casa' && (<>
-          <Text style={u.h1}>¿Y en la casa?</Text>
+          <Text style={s.titulo}>¿Y en la casa?</Text>
           <Text style={u.soft}>Cocinar, lavar, barrer, planchar, hacer mercado.</Text>
           <Opciones<Casa> valor={r.casa} onCambio={v => set({ casa: v })} opciones={CASA.map(([id, l]) => [id, l])} />
           <Text style={u.label}>¿Cuidas niños pequeños?</Text>
           <Segmento<string> opciones={[['no', 'No'], ['si', 'Sí']]} valor={r.ninos ? 'si' : 'no'} onCambio={v => set({ ninos: v === 'si' })} />
         </>)}
 
-        {pantalla === 'ejercicio' && (<>
-          <Text style={u.h1}>¿Haces ejercicio?</Text>
+        {pantalla === 'ejercicio' && nuevo && (<>
+          <Text style={s.titulo}>Agregar una actividad</Text>
+          <Buscador items={EJERCICIOS.filter(x => x.id !== 'otro').map(x => ({ id: x.id, nombre: x.nombre, ej: '' }))} visibles={6}
+            valor={nuevo.tipo} otroTexto={nuevo.nombre ?? ''} placeholder="Busca: correr, pesas, cuerda, fútbol…"
+            onEscoger={id => setNuevo({ ...nuevo, tipo: id, nombre: undefined })} onOtro={t => setNuevo({ ...nuevo, tipo: 'otro', nombre: t })} />
+          <Text style={u.label}>Intensidad</Text>
+          <Segmento<Intensidad> valor={nuevo.intensidad} onCambio={v => setNuevo({ ...nuevo, intensidad: v })}
+            opciones={[['suave', 'Suave', 'puedes cantar'], ['moderada', 'Moderada', 'hablas, no cantas'], ['fuerte', 'Fuerte', 'casi sin aire']]} />
+          <Text style={u.label}>Cuánto dura cada vez</Text>
+          <Minutos valor={nuevo.minutos} onCambio={m => setNuevo({ ...nuevo, minutos: m })} opciones={[15, 30, 45, 60, 90, 120]} />
+          <Text style={u.label}>Días a la semana</Text>
+          <Chips<string> valor={String(nuevo.dias)} onCambio={v => setNuevo({ ...nuevo, dias: Number(v) })}
+            opciones={[['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7']]} />
+        </>)}
+
+        {pantalla === 'ejercicio' && !nuevo && (<>
+          <Text style={s.titulo}>¿Haces ejercicio?</Text>
           <Text style={u.soft}>Agrega cada actividad que hagas en la semana. Si no haces, sigue sin agregar nada.</Text>
           {r.ejercicios.map((e, k) => (
             <View key={k} style={[u.card, { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14 }]}>
@@ -305,46 +361,30 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
               </Pressable>
             </View>
           ))}
-          {nuevo ? (
-            <View style={[u.card, { gap: 12 }]}>
-              <Text style={u.label}>¿Qué haces?</Text>
-              <Chips<string> valor={nuevo.tipo} onCambio={v => setNuevo({ ...nuevo, tipo: v })} opciones={EJERCICIOS.map(x => [x.id, x.nombre])} />
-              {nuevo.tipo === 'otro' && (
-                <Campo etiqueta="¿Cuál?" value={nuevo.nombre ?? ''} onChangeText={v => setNuevo({ ...nuevo, nombre: v })} placeholder="Ej. escalada, remo, ciclomontañismo" autoFocus />
-              )}
-              <Text style={u.label}>¿Con qué intensidad?</Text>
-              <Opciones<Intensidad> valor={nuevo.intensidad} onCambio={v => setNuevo({ ...nuevo, intensidad: v })} opciones={[
-                ['suave', 'Suave', 'Puedes ir cantando'], ['moderada', 'Moderada', 'Puedes hablar, pero no cantar'], ['fuerte', 'Fuerte', 'Casi no puedes hablar'],
-              ]} />
-              <Text style={u.label}>¿Cuánto dura cada vez?</Text>
-              <Minutos valor={nuevo.minutos} onCambio={m => setNuevo({ ...nuevo, minutos: m })} opciones={[10, 15, 20, 30, 45, 60, 90, 120]} />
-              <Text style={u.label}>¿Cuántos días a la semana?</Text>
-              <Chips<string> valor={String(nuevo.dias)} onCambio={v => setNuevo({ ...nuevo, dias: Number(v) })}
-                opciones={[['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['7', '7']]} />
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <View style={{ flex: 1 }}><Boton texto="Cancelar" tipo="borde" onPress={() => setNuevo(null)} /></View>
-                <View style={{ flex: 2 }}><Boton texto="Agregar" onPress={agregarEjercicio} cargando={revisando} /></View>
-              </View>
-            </View>
-          ) : (
-            <Boton texto={r.ejercicios.length ? '+ Agregar otra actividad' : '+ Agregar una actividad'} tipo="borde"
-              onPress={() => setNuevo({ tipo: 'caminar', intensidad: 'moderada', minutos: 30, dias: 3 })} />
-          )}
+          <Boton texto={r.ejercicios.length ? '+ Agregar otra actividad' : '+ Agregar una actividad'} tipo="borde"
+            onPress={() => setNuevo({ tipo: 'caminar', intensidad: 'moderada', minutos: 30, dias: 3 })} />
         </>)}
 
         {pantalla === 'resultado' && <Resultado basal={gasto(perfil).basal} viejo={gasto(perfil).total} r={r} />}
 
+      </ScrollView>
+
+      {/* Botones fijos abajo: siempre a la vista */}
+      <View style={s.pie}>
         {error && <Text style={u.error}>{error}</Text>}
-        {!nuevo && (
-          <View style={{ flexDirection: 'row', gap: 10, paddingTop: 6 }}>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          {nuevo ? (<>
+            <View style={{ flex: 1 }}><Boton texto="Cancelar" tipo="borde" onPress={() => { setNuevo(null); setError(null); }} /></View>
+            <View style={{ flex: 2 }}><Boton texto="Agregar" onPress={agregarEjercicio} cargando={revisando} /></View>
+          </>) : (<>
             <View style={{ flex: 1 }}><Boton texto={pantalla === 'resultado' ? 'Volver a empezar' : 'Atrás'} tipo="borde"
               onPress={() => (pantalla === 'resultado' ? (setI(0), setR(RUTINA_INICIAL)) : atras())} /></View>
             {pantalla !== 'resultado' && (
               <View style={{ flex: 2 }}><Boton texto={pantalla === 'ejercicio' ? (r.ejercicios.length ? 'Ver mi resultado' : 'No hago ejercicio') : 'Continuar'} onPress={siguiente} cargando={revisando} /></View>
             )}
-          </View>
-        )}
-      </ScrollView>
+          </>)}
+        </View>
+      </View>
     </View>
   );
 }
@@ -355,7 +395,7 @@ function Resultado({ basal, viejo, r }: { basal: number; viejo: number; r: Rutin
   const g = gastoPorRutina(basal, r);
   return (
     <View style={{ gap: 14 }}>
-      <Text style={u.h1}>Tu cuerpo gasta al día</Text>
+      <Text style={s.titulo}>Tu cuerpo gasta al día</Text>
       <View style={{ backgroundColor: C.accent, borderRadius: 22, padding: 18, gap: 2 }}>
         <Text style={{ color: C.onAccent, fontSize: 48, fontWeight: '700', letterSpacing: -1.4 }}>{fmt(g.total)} kcal</Text>
         <Text style={{ color: C.onAccent, fontSize: 14 }}>Promedio de la semana, sumando días de trabajo y días libres.</Text>
@@ -392,12 +432,20 @@ function Resultado({ basal, viejo, r }: { basal: number; viejo: number; r: Rutin
 }
 
 const s = StyleSheet.create({
-  cont: { padding: 18, gap: 16, maxWidth: 520, width: '100%', alignSelf: 'center' },
+  cont: { paddingHorizontal: 18, paddingTop: 14, paddingBottom: 18, gap: 12, maxWidth: 520, width: '100%', alignSelf: 'center' },
+  titulo: { fontSize: 24, fontWeight: '700', letterSpacing: -0.4, color: C.text, lineHeight: 29 },
+  pie: { paddingHorizontal: 18, paddingTop: 10, paddingBottom: 14, gap: 8, borderTopWidth: 1, borderTopColor: C.divider, backgroundColor: C.bg, width: '100%', maxWidth: 520, alignSelf: 'center' },
+  cuadros: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  cuadro: { width: '48.5%', minHeight: 52, backgroundColor: C.surface, borderRadius: 14, borderWidth: 1, borderColor: C.surface, paddingHorizontal: 12, paddingVertical: 8, justifyContent: 'center' },
+  cuadroOn: { borderColor: C.accent, backgroundColor: '#2A1C16' },
+  cuadroTxt: { fontSize: 14, fontWeight: '600', color: C.text },
+  cuadroSub: { fontSize: 12, color: C.muted, marginTop: 1 },
+  buscar: { backgroundColor: C.surface2, borderRadius: 14, minHeight: 46, paddingHorizontal: 14, color: C.text, fontSize: 15 },
   barra: { height: 4, backgroundColor: C.surface3, marginHorizontal: 18, borderRadius: 2, marginTop: 8 },
   barraFill: { height: 4, backgroundColor: C.accent, borderRadius: 2 },
   paso: { fontSize: 13, color: C.muted },
-  hora: { flex: 1, textAlign: 'center', fontSize: 30, fontWeight: '700', color: C.text, letterSpacing: -0.6 },
-  opcion: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderRadius: 16, borderWidth: 1, borderColor: C.surface, paddingHorizontal: 16, paddingVertical: 14, minHeight: 56 },
+  hora: { flex: 1, textAlign: 'center', fontSize: 26, fontWeight: '700', color: C.text, letterSpacing: -0.5 },
+  opcion: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderRadius: 14, borderWidth: 1, borderColor: C.surface, paddingHorizontal: 14, paddingVertical: 10, minHeight: 50 },
   opcionTxt: { fontSize: 16, fontWeight: '600', color: C.text },
   opcionSub: { fontSize: 13, color: C.muted, marginTop: 2 },
   radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#4A4A4E' },
