@@ -62,14 +62,16 @@ Deno.serve(async req => {
         continue;
       }
       await db.from('recordatorios').upsert({ perfil_id: p.id, fecha, momento: c.id, estado: 'enviado', pospuesto_hasta: null, actualizado: ahoraISO });
-      const { data: subs } = await db.from('suscripciones_push').select('endpoint, p256dh, auth').eq('usuario_id', p.cuenta_id);
+      // Solo a los celulares de este perfil («Este celular es de…») y a los que no tienen dueño
+      const { data: todas } = await db.from('suscripciones_push').select('endpoint, p256dh, auth, perfil_id').eq('usuario_id', p.cuenta_id);
+      const subs = (todas ?? []).filter(s => !s.perfil_id || s.perfil_id === p.id);
       const carga = JSON.stringify({
         titulo: 'Kalo',
         cuerpo: `${p.nombre}, ${PREGUNTA[c.id]} Toca para contarle a Kalo qué comiste.`,
         url: `./?registrar=${c.id}&perfil=${p.id}&fecha=${fecha}`,
         tag: `kalo-${p.id}-${c.id}`,
       });
-      for (const s of subs ?? []) {
+      for (const s of subs) {
         try {
           await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, carga, { TTL: 3600 });
           enviados++;

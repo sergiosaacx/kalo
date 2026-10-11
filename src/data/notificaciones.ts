@@ -7,6 +7,20 @@ import { supabase } from '../lib/supabase';
 const VAPID_PUBLICA = 'BEHu472LfzR3ushQ14EU9uStat0MpVDdg4jiKiEMAaH1qMhMLsKBEsg5npyToUw9Yh13YBn7QeMjROFGqSL_l9c';
 const BASE = '/kalo';
 const PREGUNTADO = 'kalo_notif_preguntado'; // este celular ya vio el letrero
+const DUENO = 'kalo_celular_de';            // «Este celular es de…»: id del perfil (o nada = de todos)
+
+export const duenoCelular = () => { try { return localStorage.getItem(DUENO); } catch { return null; } };
+
+// Asigna este celular a un perfil (o a todos con null): Kalo abre con ese perfil y solo le llegan sus notificaciones
+export async function asignarCelular(perfilId: string | null) {
+  try { if (perfilId) localStorage.setItem(DUENO, perfilId); else localStorage.removeItem(DUENO); } catch { /* sin almacenamiento */ }
+  if (!web || !('serviceWorker' in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.getRegistration(`${BASE}/`);
+    const sub = await reg?.pushManager.getSubscription();
+    if (sub) await supabase.from('suscripciones_push').update({ perfil_id: perfilId }).eq('endpoint', sub.endpoint);
+  } catch { /* sin suscripción todavía: se asigna al suscribirse */ }
+}
 
 export type EstadoNotif = 'no-soportado' | 'instalar' | 'preguntar' | 'activadas' | 'bloqueadas';
 
@@ -45,7 +59,10 @@ async function suscribir(): Promise<string | null> {
     const { error } = await supabase.rpc('guardar_suscripcion', {
       p_endpoint: j.endpoint, p_p256dh: j.keys?.p256dh, p_auth: j.keys?.auth, p_dispositivo: navigator.userAgent,
     });
-    return error ? 'No pudimos guardar las notificaciones. Inténtalo de nuevo.' : null;
+    if (error) return 'No pudimos guardar las notificaciones. Inténtalo de nuevo.';
+    const dueno = duenoCelular();
+    if (dueno) await supabase.from('suscripciones_push').update({ perfil_id: dueno }).eq('endpoint', j.endpoint!);
+    return null;
   } catch {
     return 'No pudimos activar las notificaciones en este celular.';
   }

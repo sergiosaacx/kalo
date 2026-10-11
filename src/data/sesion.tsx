@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { soltarEsteCelular } from './notificaciones';
+import { asignarCelular, duenoCelular, soltarEsteCelular } from './notificaciones';
 import { edadDe, type Meta, type Perfil, type Salud, type Sexo, type Trabajo } from '../logic/energia';
 import type { Rutina } from '../logic/actividad';
 import { AVATAR_COLORS } from '../theme';
@@ -74,6 +74,11 @@ export function SesionProvider({ children }: { children: React.ReactNode }) {
   const [sesion, setSesion] = useState<Session | null>(null);
   const [perfiles, setPerfiles] = useState<PerfilActivo[]>([]);
   const [cargando, setCargando] = useState(true);
+  // Perfil activo de ESTE celular (no de la cuenta): arranca en el dueño del celular o en el último que se usó aquí
+  const [activoLocal, setActivoLocal] = useState<string | null>(() => {
+    try { return duenoCelular() ?? localStorage.getItem('kalo_activo'); } catch { return null; }
+  });
+  const usarLocal = (id: string) => { setActivoLocal(id); try { localStorage.setItem('kalo_activo', id); } catch { /* sin almacenamiento */ } };
 
   const cargarPerfiles = useCallback(async () => {
     const { data } = await supabase.from('perfiles').select('*').order('creado');
@@ -94,6 +99,7 @@ export function SesionProvider({ children }: { children: React.ReactNode }) {
   }, [cargarPerfiles]);
 
   const activar = useCallback(async (id: string) => {
+    usarLocal(id);
     setPerfiles(ps => ps.map(p => ({ ...p, activo: p.id === id })));
     await supabase.rpc('activar_perfil', { p: id });
   }, []);
@@ -103,6 +109,7 @@ export function SesionProvider({ children }: { children: React.ReactNode }) {
     const { data, error } = await supabase.from('perfiles').insert({ ...haciaDB({ ...p, color }) }).select('id').single();
     if (error || !data) return 'No pudimos crear el perfil. Revisa tu conexión e inténtalo de nuevo.';
     await supabase.rpc('activar_perfil', { p: data.id });
+    usarLocal(data.id);
     await cargarPerfiles();
     return null;
   }, [perfiles.length, cargarPerfiles]);
@@ -118,17 +125,18 @@ export function SesionProvider({ children }: { children: React.ReactNode }) {
   const borrarPerfil = useCallback(async (id: string) => {
     const resto = perfiles.filter(p => p.id !== id);
     if (resto.length === 0) return 'No puedes borrar el único perfil de la cuenta.';
-    const eraActivo = (perfiles.find(p => p.activo) ?? perfiles[0])?.id === id;
+    const eraActivo = (perfiles.find(p => p.id === activoLocal) ?? perfiles.find(p => p.activo) ?? perfiles[0])?.id === id;
     const { error } = await supabase.from('perfiles').delete().eq('id', id);
     if (error) return 'No pudimos borrar el perfil. Revisa tu conexión e inténtalo de nuevo.';
-    if (eraActivo) await supabase.rpc('activar_perfil', { p: resto[0].id });
+    if (eraActivo) { await supabase.rpc('activar_perfil', { p: resto[0].id }); usarLocal(resto[0].id); }
+    if (duenoCelular() === id) await asignarCelular(null);
     await cargarPerfiles();
     return null;
-  }, [perfiles, cargarPerfiles]);
+  }, [perfiles, activoLocal, cargarPerfiles]);
 
   const salir = useCallback(async () => { await soltarEsteCelular(); await supabase.auth.signOut(); }, []);
 
-  const activo = perfiles.find(p => p.activo) ?? perfiles[0] ?? null;
+  const activo = perfiles.find(p => p.id === activoLocal) ?? perfiles.find(p => p.activo) ?? perfiles[0] ?? null;
   return (
     <SesionCtx.Provider value={{ cargando, sesion, perfiles, activo, crearPerfil, actualizarPerfil, activar, borrarPerfil, salir }}>
       {children}
