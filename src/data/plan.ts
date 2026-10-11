@@ -23,17 +23,21 @@ export interface ItemPlan { id: string; alimento_id: string; cantidad: number; c
 // Plan de un día para un perfil: ítems por comida, con cambios guardados al instante
 export function usePlanDia(perfilId: string | undefined, fecha = hoyISO()) {
   const [items, setItems] = useState<ItemPlan[] | null>(null);
+  const [nombres, setNombres] = useState<Partial<Record<ComidaId, string>>>({}); // opción puesta en cada comida
 
   const cargar = useCallback(async () => {
     if (!perfilId) return;
     const { data } = await supabase.from('plan')
-      .select('comida, plan_items(id, alimento_id, cantidad, comido, orden)')
+      .select('comida, nombre, plan_items(id, alimento_id, cantidad, comido, orden)')
       .eq('perfil_id', perfilId).eq('fecha', fecha);
     const lista: ItemPlan[] = [];
-    for (const p of (data ?? []) as { comida: ComidaId; plan_items: (Omit<ItemPlan, 'comida'> & { orden: number })[] }[]) {
+    const n: Partial<Record<ComidaId, string>> = {};
+    for (const p of (data ?? []) as { comida: ComidaId; nombre: string | null; plan_items: (Omit<ItemPlan, 'comida'> & { orden: number })[] }[]) {
+      if (p.nombre) n[p.comida] = p.nombre;
       for (const it of [...p.plan_items].sort((a, b) => a.orden - b.orden)) lista.push({ ...it, cantidad: Number(it.cantidad), comida: p.comida });
     }
     setItems(lista);
+    setNombres(n);
   }, [perfilId, fecha]);
 
   useEffect(() => { setItems(null); cargar(); }, [cargar]);
@@ -49,7 +53,7 @@ export function usePlanDia(perfilId: string | undefined, fecha = hoyISO()) {
     await supabase.from('plan_items').delete().eq('id', id);
   }, []);
 
-  return { items, alternar, quitar, recargar: cargar };
+  return { items, nombres, alternar, quitar, recargar: cargar };
 }
 
 // Agrega un alimento a una comida del día (crea la comida del plan si no existe)

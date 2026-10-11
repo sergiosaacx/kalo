@@ -22,7 +22,7 @@ for (const m of menus) {
     kcal += (a.por_100g.kcal || 0) * g / 100;
     return `(${q(id)}, ${Math.round(g / a.base.gramos * 100) / 100}, ${i})`;
   });
-  sql += `with o as (insert into public.opciones (cuenta_id, comida, nombre, fuente, descripcion) values (null, ${q(m.comida)}, ${q(m.nombre)}, 'kalo', ${q(m.descripcion)}) returning id)
+  sql += `with o as (insert into public.opciones (cuenta_id, comida, nombre, fuente, descripcion, tiempo_min, dificultad) values (null, ${q(m.comida)}, ${q(m.nombre)}, 'kalo', ${q(m.descripcion)}, ${m.tiempo_min}, ${q(m.dificultad)}) returning id)
 insert into public.opcion_items (opcion_id, alimento_id, cantidad, orden) select o.id, v.a, v.c, v.n from o, (values ${items.join(', ')}) as v(a, c, n);\n`;
   console.log(`${m.comida.padEnd(5)} ${Math.round(kcal).toString().padStart(5)} kcal · ${m.nombre}`);
 }

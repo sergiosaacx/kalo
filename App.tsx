@@ -7,6 +7,7 @@ import { SesionProvider, useSesion } from './src/data/sesion';
 import { Alimentos } from './src/screens/Alimentos';
 import { Entrar } from './src/screens/Entrar';
 import { Gasto } from './src/screens/Gasto';
+import { Menu } from './src/screens/Menu';
 import { Hoy } from './src/screens/Hoy';
 import { Onboarding } from './src/screens/Onboarding';
 import { Perfil } from './src/screens/Perfil';
@@ -60,6 +61,8 @@ function Raiz() {
           <Hoy irA={irA} agregarA={c => { setDestino(c); setTab('alimentos'); }} />
         ) : tab === 'alimentos' ? (
           <Alimentos destino={destino} onAgregado={() => irA('hoy')} />
+        ) : tab === 'menu' ? (
+          <Menu />
         ) : tab === 'gasto' ? (
           <Gasto cambiarDia={() => setEditandoDia(true)} />
         ) : tab === 'perfil' ? (
