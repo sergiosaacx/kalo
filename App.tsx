@@ -6,6 +6,7 @@ import type { ComidaId } from './src/data/plan';
 import { SesionProvider, useSesion } from './src/data/sesion';
 import { Alimentos } from './src/screens/Alimentos';
 import { Entrar } from './src/screens/Entrar';
+import { Gasto } from './src/screens/Gasto';
 import { Hoy } from './src/screens/Hoy';
 import { Onboarding } from './src/screens/Onboarding';
 import { Perfil } from './src/screens/Perfil';
@@ -30,10 +31,11 @@ export default function App() {
 }
 
 function Raiz() {
-  const { cargando, sesion, perfiles } = useSesion();
+  const { cargando, sesion, perfiles, activo, actualizarPerfil } = useSesion();
   const [tab, setTab] = useState<string>('hoy');
   const [destino, setDestino] = useState<ComidaId | null>(null);
   const [nuevo, setNuevo] = useState(false);
+  const [editandoDia, setEditandoDia] = useState(false);
 
   // …/kalo/?simulacro: el cuestionario «Tu día» para probarlo sin cuenta (no guarda nada)
   if (SIMULACRO) return <TuDia />;
@@ -41,6 +43,14 @@ function Raiz() {
   if (!sesion) return <Entrar />;
   if (perfiles.length === 0) return <Onboarding primero />;
   if (nuevo) return <Onboarding primero={false} onCancelar={() => setNuevo(false)} />;
+  // «Tu día» a pantalla completa desde la pestaña Gasto: al terminar se guarda en el perfil
+  if (editandoDia && activo) {
+    return (
+      <TuDia base={{ edad: activo.edad, estatura: activo.estatura, peso: activo.peso, sexo: activo.sexo }} inicial={activo.rutina}
+        textoListo="Guardar" onSalir={() => setEditandoDia(false)}
+        onListo={async r => { await actualizarPerfil(activo.id, { rutina: r }); setEditandoDia(false); }} />
+    );
+  }
 
   const irA = (t: string) => { setDestino(null); setTab(t); };
   return (
@@ -50,6 +60,8 @@ function Raiz() {
           <Hoy irA={irA} agregarA={c => { setDestino(c); setTab('alimentos'); }} />
         ) : tab === 'alimentos' ? (
           <Alimentos destino={destino} onAgregado={() => irA('hoy')} />
+        ) : tab === 'gasto' ? (
+          <Gasto cambiarDia={() => setEditandoDia(true)} />
         ) : tab === 'perfil' ? (
           <Perfil nuevoPerfil={() => setNuevo(true)} />
         ) : (

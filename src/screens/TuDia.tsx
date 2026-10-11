@@ -13,8 +13,8 @@ type Pantalla = 'datos' | 'sueno' | 'ocupacion' | 'oficio' | 'horario' | 'transp
 const DIAS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 const fq = (n: number) => (Math.round(n * 10) / 10).toLocaleString('es-CO');
 
-function secuencia(r: Rutina): Pantalla[] {
-  const s: Pantalla[] = ['datos', 'sueno', 'ocupacion'];
+function secuencia(r: Rutina, conDatos: boolean): Pantalla[] {
+  const s: Pantalla[] = conDatos ? ['datos', 'sueno', 'ocupacion'] : ['sueno', 'ocupacion'];
   if (r.ocupacion === 'trabajo' || r.ocupacion === 'ambos') s.push('oficio');
   if (r.ocupacion === 'trabajo' || r.ocupacion === 'ambos' || r.ocupacion === 'estudio') s.push('horario', 'transporte');
   if (r.ocupacion === 'ambos') s.push('estudio');
@@ -161,8 +161,17 @@ function Opciones<T extends string>({ opciones, valor, onCambio }: { opciones: [
   );
 }
 
-export function TuDia({ onSalir }: { onSalir?: () => void }) {
-  const [r, setR] = useState<Rutina>(RUTINA_INICIAL);
+// Sin «base» es el simulacro (pide los datos y no guarda). Con «base» (datos del perfil) se usa en el
+// registro y en la pestaña Gasto: arranca en el sueño y al final entrega la rutina con onListo.
+export function TuDia({ onSalir, base, inicial, onListo, textoListo = 'Continuar' }: {
+  onSalir?: () => void;
+  base?: { edad: number; estatura: number; peso: number; sexo: Sexo };
+  inicial?: Rutina;
+  onListo?: (r: Rutina) => void | Promise<void>;
+  textoListo?: string;
+}) {
+  const [r, setR] = useState<Rutina>({ ...RUTINA_INICIAL, ...inicial });
+  const [guardando, setGuardando] = useState(false);
   const [datos, setDatos] = useState({ estatura: '165', peso: '65', sexo: 'F' as Sexo });
   const [nac, setNac] = useState({ dia: '', mes: '', anio: '' });
   const [i, setI] = useState(0);
@@ -172,13 +181,15 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
   const set = (p: Partial<Rutina>) => setR(x => ({ ...x, ...p }));
   const setExtra = (p: Partial<TrabajoExtra>) => setR(x => ({ ...x, extra: { ...(x.extra ?? EXTRA_INICIAL), ...p } }));
 
-  const pasos = secuencia(r);
+  const pasos = secuencia(r, !base);
   const pantalla = pasos[Math.min(i, pasos.length - 1)];
   const total = pasos.length - 1; // sin contar el resultado
 
   const fechaNac = fechaValida(nac.dia, nac.mes, nac.anio);
-  const edad = fechaNac ? edadDe(fechaNac) : 30, estatura = parseFloat(datos.estatura), peso = parseFloat(datos.peso.replace(',', '.'));
-  const perfil = { id: '', nombre: '', edad, sexo: datos.sexo, estatura, peso, pesoInicial: peso, meta: 'mantener' as const, pesoMeta: peso, ritmo: 0.5, trabajo: 'pie' as const, pasos: 6000, ejercicio: 20, sueno: 7, color: '' };
+  const edad = base?.edad ?? (fechaNac ? edadDe(fechaNac) : 30);
+  const estatura = base?.estatura ?? parseFloat(datos.estatura), peso = base?.peso ?? parseFloat(datos.peso.replace(',', '.'));
+  const perfil = { id: '', nombre: '', edad, sexo: base?.sexo ?? datos.sexo, estatura, peso, pesoInicial: peso, meta: 'mantener' as const, pesoMeta: peso, ritmo: 0.5, trabajo: 'pie' as const, pasos: 6000, ejercicio: 20, sueno: 7, color: '' };
+  const listo = async () => { if (!onListo) return; setGuardando(true); await onListo(r); setGuardando(false); };
 
   const validar = (): string | null => {
     if (pantalla === 'datos') {
@@ -376,7 +387,7 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
             onPress={() => setNuevo({ tipo: 'caminar', intensidad: 'moderada', minutos: 30, dias: 3 })} />
         </>)}
 
-        {pantalla === 'resultado' && <Resultado basal={gasto(perfil).basal} viejo={gasto(perfil).total} r={r} />}
+        {pantalla === 'resultado' && <Resultado basal={gasto(perfil).basal} viejo={base ? null : gasto(perfil).total} r={r} />}
 
       </ScrollView>
 
@@ -388,10 +399,13 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
             <View style={{ flex: 1 }}><Boton texto="Cancelar" tipo="borde" onPress={() => { setNuevo(null); setError(null); }} /></View>
             <View style={{ flex: 2 }}><Boton texto="Agregar" onPress={agregarEjercicio} cargando={revisando} /></View>
           </>) : (<>
-            <View style={{ flex: 1 }}><Boton texto={pantalla === 'resultado' ? 'Volver a empezar' : 'Atrás'} tipo="borde"
-              onPress={() => (pantalla === 'resultado' ? (setI(0), setR(RUTINA_INICIAL)) : atras())} /></View>
+            <View style={{ flex: 1 }}><Boton texto={pantalla === 'resultado' && !onListo ? 'Volver a empezar' : 'Atrás'} tipo="borde"
+              onPress={() => (pantalla === 'resultado' && !onListo ? (setI(0), setR(RUTINA_INICIAL)) : atras())} /></View>
             {pantalla !== 'resultado' && (
               <View style={{ flex: 2 }}><Boton texto={pantalla === 'ejercicio' ? (r.ejercicios.length ? 'Ver mi resultado' : 'No hago ejercicio') : 'Continuar'} onPress={siguiente} cargando={revisando} /></View>
+            )}
+            {pantalla === 'resultado' && onListo && (
+              <View style={{ flex: 2 }}><Boton texto={textoListo} onPress={listo} cargando={guardando} /></View>
             )}
           </>)}
         </View>
@@ -402,11 +416,12 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
 
 const COLORES: Record<string, string> = { sueno: '#6E6C68', jornada: C.accent, extra: '#B85A35', estudio: '#F3B193', transporte: C.carbs, casa: C.fat, ejercicio: C.success, resto: '#3A3A3E' };
 
-function Resultado({ basal, viejo, r }: { basal: number; viejo: number; r: Rutina }) {
+// Resultado del gasto: se usa al final del cuestionario y en la pestaña Gasto
+export function Resultado({ basal, viejo = null, r, titulo = 'Tu cuerpo gasta al día' }: { basal: number; viejo?: number | null; r: Rutina; titulo?: string }) {
   const g = gastoPorRutina(basal, r);
   return (
     <View style={{ gap: 14 }}>
-      <Text style={s.titulo}>Tu cuerpo gasta al día</Text>
+      <Text style={s.titulo}>{titulo}</Text>
       <View style={{ backgroundColor: C.accent, borderRadius: 22, padding: 18, gap: 2 }}>
         <Text style={{ color: C.onAccent, fontSize: 48, fontWeight: '700', letterSpacing: -1.4 }}>{fmt(g.total)} kcal</Text>
         <Text style={{ color: C.onAccent, fontSize: 14 }}>Promedio de la semana, sumando días de trabajo y días libres.</Text>
@@ -432,12 +447,14 @@ function Resultado({ basal, viejo, r }: { basal: number; viejo: number; r: Rutin
           </View>
         ))}
       </View>
-      <View style={[u.card, { gap: 4 }]}>
-        <Text style={u.label}>Con el cálculo de ahora («De pie», 6.000 pasos, 20 min de ejercicio)</Text>
-        <Text style={{ color: C.text, fontSize: 22, fontWeight: '700' }}>{fmt(viejo)} kcal</Text>
-        <Text style={{ color: C.muted, fontSize: 13 }}>Diferencia: {fmt(Math.abs(g.total - viejo))} kcal al día.</Text>
-      </View>
-      <Text style={[u.soft, { fontSize: 13 }]}>Esto es un simulacro: no se guarda nada.</Text>
+      {viejo !== null && (<>
+        <View style={[u.card, { gap: 4 }]}>
+          <Text style={u.label}>Con el cálculo de ahora («De pie», 6.000 pasos, 20 min de ejercicio)</Text>
+          <Text style={{ color: C.text, fontSize: 22, fontWeight: '700' }}>{fmt(viejo)} kcal</Text>
+          <Text style={{ color: C.muted, fontSize: 13 }}>Diferencia: {fmt(Math.abs(g.total - viejo))} kcal al día.</Text>
+        </View>
+        <Text style={[u.soft, { fontSize: 13 }]}>Esto es un simulacro: no se guarda nada.</Text>
+      </>)}
     </View>
   );
 }

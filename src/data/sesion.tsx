@@ -2,18 +2,19 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { edadDe, type Meta, type Perfil, type Sexo, type Trabajo } from '../logic/energia';
+import type { Rutina } from '../logic/actividad';
 import { AVATAR_COLORS } from '../theme';
 
 // Fila de public.perfiles
 interface PerfilDB {
   id: string; nombre: string; edad: number; sexo: Sexo; estatura_cm: number; peso_kg: number; peso_inicial_kg: number;
   meta: Meta; peso_meta_kg: number; ritmo_kg_semana: number; trabajo: Trabajo; pasos_dia: number; ejercicio_min: number;
-  sueno_h: number; color: string; activo: boolean; fecha_nacimiento: string | null;
+  sueno_h: number; color: string; activo: boolean; fecha_nacimiento: string | null; rutina: Rutina | null;
 }
 
 const desdeDB = (r: PerfilDB): Perfil & { activo: boolean } => ({
   id: r.id, nombre: r.nombre, edad: r.fecha_nacimiento ? edadDe(r.fecha_nacimiento) : r.edad,
-  fechaNacimiento: r.fecha_nacimiento ?? undefined, sexo: r.sexo, estatura: Number(r.estatura_cm), peso: Number(r.peso_kg),
+  fechaNacimiento: r.fecha_nacimiento ?? undefined, rutina: r.rutina ?? undefined, sexo: r.sexo, estatura: Number(r.estatura_cm), peso: Number(r.peso_kg),
   pesoInicial: Number(r.peso_inicial_kg), meta: r.meta, pesoMeta: Number(r.peso_meta_kg), ritmo: Number(r.ritmo_kg_semana),
   trabajo: r.trabajo, pasos: r.pasos_dia, ejercicio: r.ejercicio_min, sueno: Number(r.sueno_h), color: r.color, activo: r.activo,
 });
@@ -35,6 +36,7 @@ const haciaDB = (p: Partial<Perfil>) => {
   if (p.ejercicio !== undefined) m.ejercicio_min = p.ejercicio;
   if (p.sueno !== undefined) m.sueno_h = p.sueno;
   if (p.color !== undefined) m.color = p.color;
+  if (p.rutina !== undefined) m.rutina = p.rutina;
   return m;
 };
 
