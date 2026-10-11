@@ -20,6 +20,8 @@ self.addEventListener('notificationclick', e => {
   const url = new URL((e.notification.data && e.notification.data.url) || './', self.registration.scope).href;
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
     const abierta = cs.find(c => c.url.startsWith(self.registration.scope));
-    return abierta ? abierta.focus() : self.clients.openWindow(url);
+    if (!abierta) return self.clients.openWindow(url);
+    abierta.postMessage({ tipo: 'registrar', url });
+    return abierta.focus();
   }));
 });

@@ -4,7 +4,9 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LetreroNotificaciones } from './src/components/Notificaciones';
 import { estadoNotif, sincronizarNotificaciones, yaPreguntado } from './src/data/notificaciones';
-import type { ComidaId } from './src/data/plan';
+import { MOMENTOS, esMomento, pendienteDeHoy, type Momento } from './src/data/comidas';
+import { hoyISO, type ComidaId } from './src/data/plan';
+import { Pregunta } from './src/screens/Pregunta';
 import { SesionProvider, useSesion } from './src/data/sesion';
 import { Alimentos } from './src/screens/Alimentos';
 import { Entrar } from './src/screens/Entrar';
@@ -34,7 +36,7 @@ export default function App() {
 }
 
 function Raiz() {
-  const { cargando, sesion, perfiles, activo, actualizarPerfil } = useSesion();
+  const { cargando, sesion, perfiles, activo, actualizarPerfil, activar } = useSesion();
   const [tab, setTab] = useState<string>('hoy');
   const [destino, setDestino] = useState<ComidaId | null>(null);
   const [nuevo, setNuevo] = useState(false);
@@ -47,6 +49,38 @@ function Raiz() {
     sincronizarNotificaciones();
     if (estadoNotif() === 'preguntar' && !yaPreguntado()) setLetrero(true);
   }, [listo]);
+
+  // «¿Ya desayunaste?»: la abre la notificación (Kalo cerrada: viene en la dirección; abierta: aviso del service worker)
+  // o, al abrir Kalo, la comida que se preguntó hoy y quedó sin responder
+  const [pregunta, setPregunta] = useState<{ momento: Momento; fecha: string; perfilId?: string } | null>(null);
+  const [registro, setRegistro] = useState<{ momento: Momento; fecha: string; abrirBandeja: boolean } | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+  useEffect(() => {
+    if (!listo || Platform.OS !== 'web') return;
+    const q = new URLSearchParams(window.location.search);
+    const m = q.get('registrar');
+    if (esMomento(m)) {
+      setPregunta({ momento: m, fecha: q.get('fecha') ?? hoyISO(), perfilId: q.get('perfil') ?? undefined });
+      window.history.replaceState(null, '', window.location.pathname);
+    } else if (activo) {
+      pendienteDeHoy(activo.id, hoyISO()).then(p => p && setPregunta(x => x ?? { momento: p, fecha: hoyISO(), perfilId: activo.id }));
+    }
+    const oir = (e: MessageEvent) => {
+      const d = e.data as { tipo?: string; url?: string };
+      if (d?.tipo !== 'registrar' || !d.url) return;
+      const u = new URL(d.url, window.location.href).searchParams;
+      const mm = u.get('registrar');
+      if (esMomento(mm)) { setRegistro(null); setPregunta({ momento: mm, fecha: u.get('fecha') ?? hoyISO(), perfilId: u.get('perfil') ?? undefined }); }
+    };
+    navigator.serviceWorker?.addEventListener('message', oir);
+    navigator.serviceWorker?.startMessages?.();
+    return () => navigator.serviceWorker?.removeEventListener('message', oir);
+  }, [listo]);
+  // La notificación es de un perfil: si es otro de la familia, queda activo ese
+  useEffect(() => {
+    if (pregunta?.perfilId && activo && pregunta.perfilId !== activo.id && perfiles.some(p => p.id === pregunta.perfilId)) activar(pregunta.perfilId);
+  }, [pregunta?.perfilId]);
+  useEffect(() => { if (aviso) { const t = setTimeout(() => setAviso(null), 5000); return () => clearTimeout(t); } }, [aviso]);
 
   // …/kalo/?simulacro: el cuestionario «Tu día» para probarlo sin cuenta (no guarda nada)
   if (SIMULACRO) return <TuDia />;
@@ -63,14 +97,27 @@ function Raiz() {
     );
   }
 
-  const irA = (t: string) => { setDestino(null); setTab(t); };
+  const irA = (t: string) => { setDestino(null); setRegistro(null); setPregunta(null); setTab(t); };
+  const anotar = (abrirBandeja: boolean) => {
+    if (!pregunta) return;
+    setRegistro({ momento: pregunta.momento, fecha: pregunta.fecha, abrirBandeja });
+    setDestino(MOMENTOS[pregunta.momento].comida);
+    setPregunta(null);
+    setTab('alimentos');
+  };
   return (
     <>
       {/* Alimentos lleva su propio scroll para dejar la bandeja fija abajo */}
-      {tab === 'alimentos' ? (
-        <Alimentos key={destino ?? ''} destino={destino} onAgregado={() => irA('hoy')} />
+      {pregunta ? (
+        <ScrollView key="pregunta" style={{ flex: 1 }} contentContainerStyle={s.scroll}>
+          <Pregunta momento={pregunta.momento} fecha={pregunta.fecha} onOpcion={() => anotar(true)} onOtra={() => anotar(false)} onCerrar={() => setPregunta(null)} />
+        </ScrollView>
+      ) : tab === 'alimentos' ? (
+        <Alimentos key={(destino ?? '') + (registro?.momento ?? '')} destino={destino} registro={registro} abrirBandeja={registro?.abrirBandeja}
+          onAgregado={a => { irA('hoy'); if (a) setAviso(a); }} />
       ) : (
       <ScrollView key={tab + (destino ?? '')} style={{ flex: 1 }} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+        {aviso && tab === 'hoy' && <Text style={s.aviso}>{aviso}</Text>}
         {tab === 'hoy' ? (
           <Hoy irA={irA} agregarA={c => { setDestino(c); setTab('alimentos'); }} />
         ) : tab === 'menu' ? (
@@ -110,6 +157,7 @@ const s = StyleSheet.create({
   centro: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { paddingHorizontal: 18, paddingTop: 6, paddingBottom: 28, width: '100%', maxWidth: 520, alignSelf: 'center' },
   pronto: { paddingTop: 60, gap: 8 },
+  aviso: { backgroundColor: '#141A0E', borderWidth: 1, borderColor: C.success, color: C.success, borderRadius: 16, paddingVertical: 12, paddingHorizontal: 14, fontSize: 15, fontWeight: '700', marginBottom: 12, overflow: 'hidden' },
   prontoTit: { fontSize: 28, fontWeight: '700', color: C.text, letterSpacing: -0.56 },
   prontoTxt: { fontSize: 15, color: C.soft },
   tabbar: { backgroundColor: C.bg, borderTopWidth: 1, borderTopColor: C.divider },

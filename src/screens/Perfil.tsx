@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Boton, Campo, FechaNacimiento, Segmento, u } from '../components/ui';
 import { NotificacionesPerfil } from '../components/Notificaciones';
 import { MetaPeso, TarjetaMeta } from './MetaPeso';
+import { MisComidas, TarjetaComidas } from './MisComidas';
 import { TarjetaSalud } from '../components/Salud';
 import { useSesion, type PerfilActivo } from '../data/sesion';
 import { edadDe, errorFecha, fechaValida, type Sexo } from '../logic/energia';
@@ -11,9 +12,10 @@ import { C } from '../theme';
 // Perfiles de la familia + datos del perfil activo (handoff › Perfil)
 export function Perfil({ nuevoPerfil }: { nuevoPerfil: () => void }) {
   const { perfiles, activo, activar, actualizarPerfil, borrarPerfil, salir, sesion } = useSesion();
-  const [viendoMeta, setViendoMeta] = useState(false);
+  const [viendo, setViendo] = useState<'meta' | 'comidas' | null>(null);
   if (!activo) return null;
-  if (viendoMeta) return <MetaPeso key={activo.id} volver={() => setViendoMeta(false)} />;
+  if (viendo === 'meta') return <MetaPeso key={activo.id} volver={() => setViendo(null)} />;
+  if (viendo === 'comidas') return <MisComidas key={activo.id} volver={() => setViendo(null)} />;
 
   return (
     <View style={{ gap: 14 }}>
@@ -41,7 +43,9 @@ export function Perfil({ nuevoPerfil }: { nuevoPerfil: () => void }) {
         </Pressable>
       </View>
 
-      <TarjetaMeta key={'m' + activo.id} p={activo} abrir={() => setViendoMeta(true)} />
+      <TarjetaMeta key={'m' + activo.id} p={activo} abrir={() => setViendo('meta')} />
+
+      <TarjetaComidas p={activo} abrir={() => setViendo('comidas')} />
 
       <TarjetaSalud key={'s' + activo.id} valor={activo.salud} guardar={v => actualizarPerfil(activo.id, { salud: v })} />
 

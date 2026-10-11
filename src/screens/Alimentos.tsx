@@ -4,14 +4,15 @@ import { Boton, Chips, Segmento, u } from '../components/ui';
 import { CATEGORIAS, MINERALES, VITAMINAS, fotoDe, nutrientes, sinTildes, useAlimentos, type AlimentoDB } from '../data/alimentos';
 import { bandeja, useBandeja, type ItemBandeja } from '../data/bandeja';
 import { tiempoTexto, useOpciones, type Opcion } from '../data/opciones';
-import { COMIDAS, agregarVariosAlPlan, comidaDeAhora, nombreComida, type ComidaId } from '../data/plan';
+import { MOMENTOS, responder, type Momento } from '../data/comidas';
+import { COMIDAS, agregarVariosAlPlan, comidaDeAhora, hoyISO, nombreComida, type ComidaId } from '../data/plan';
 import { useSesion } from '../data/sesion';
 import { fmt } from '../logic/energia';
 import { C } from '../theme';
 
 const fq = (n: number) => (Math.round(n * 10) / 10).toLocaleString('es-CO');
 
-function Miniatura({ a, size }: { a: AlimentoDB; size: number }) {
+export function Miniatura({ a, size }: { a: AlimentoDB; size: number }) {
   const uri = fotoDe(a);
   return uri
     ? <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size > 50 ? 14 : 12, backgroundColor: C.surface2 }} />
@@ -19,14 +20,18 @@ function Miniatura({ a, size }: { a: AlimentoDB; size: number }) {
 }
 
 // Pantalla con su propio scroll: la bandeja queda fija abajo, encima de las pestañas
-export function Alimentos({ destino, onAgregado }: { destino: ComidaId | null; onAgregado: () => void }) {
+// registro: se está respondiendo «¿Ya desayunaste?» → lo que se guarde queda comido y el recordatorio respondido
+export function Alimentos({ destino, onAgregado, registro, abrirBandeja }: {
+  destino: ComidaId | null; onAgregado: (aviso?: string) => void;
+  registro?: { momento: Momento; fecha: string } | null; abrirBandeja?: boolean;
+}) {
   const { activo } = useSesion();
   const { lista, error } = useAlimentos();
   const { items, ultimo } = useBandeja();
   const [query, setQuery] = useState('');
   const [abierto, setAbierto] = useState<AlimentoDB | null>(null);
   const [comida, setComida] = useState<ComidaId>(destino ?? comidaDeAhora());
-  const [hoja, setHoja] = useState(false);
+  const [hoja, setHoja] = useState(!!abrirBandeja);
   const [guardando, setGuardando] = useState(false);
   const [errorListo, setErrorListo] = useState<string | null>(null);
   // Lo que se va a agregar desde la ficha (cantidad en porciones base + cómo se lee)
@@ -56,12 +61,14 @@ export function Alimentos({ destino, onAgregado }: { destino: ComidaId | null; o
     if (!activo || items.length === 0) return;
     setGuardando(true);
     setErrorListo(null);
-    const e = await agregarVariosAlPlan(activo.id, comida, items.map(it => ({ alimento_id: it.alimento.id, cantidad: it.cantidad })));
+    const e = await agregarVariosAlPlan(activo.id, comida, items.map(it => ({ alimento_id: it.alimento.id, cantidad: it.cantidad })), registro?.fecha ?? hoyISO(), !!registro);
     setGuardando(false);
     if (e) { setErrorListo(e); return; }
+    if (registro) await responder(activo.id, registro.fecha, registro.momento, 'respondido');
+    const aviso = registro ? `${MOMENTOS[registro.momento].nombre} anotado · ${fmt(totalKcal)} kcal` : undefined;
     bandeja.vaciar();
     setHoja(false);
-    onAgregado();
+    onAgregado(aviso);
   };
 
   return (
@@ -189,10 +196,10 @@ export function Alimentos({ destino, onAgregado }: { destino: ComidaId | null; o
 
 const textoCantidad = (a: AlimentoDB, cantidad: number) =>
   cantidad === 1 ? a.porcion_base.texto : `${fq(cantidad)} × ${a.porcion_base.texto}`;
-const itemsDe = (o: Opcion, porId: Map<string, AlimentoDB>): ItemBandeja[] => o.items
+export const itemsDe = (o: Opcion, porId: Map<string, AlimentoDB>): ItemBandeja[] => o.items
   .filter(i => porId.has(i.alimento_id))
   .map(i => { const a = porId.get(i.alimento_id)!; return { alimento: a, cantidad: i.cantidad, texto: textoCantidad(a, i.cantidad) }; });
-const kcalDe = (its: ItemBandeja[]) => its.reduce((t, it) => t + nutrientes(it.alimento, it.cantidad).kcal, 0);
+export const kcalDe = (its: ItemBandeja[]) => its.reduce((t, it) => t + nutrientes(it.alimento, it.cantidad).kcal, 0);
 
 // Solo las opciones propias de esa comida; las de Kalo quedan detrás de un botón para que las propias no se pierdan
 function ListaOpciones({ opciones, comida, porId, abrir }: { opciones: Opcion[] | null; comida: ComidaId; porId: Map<string, AlimentoDB>; abrir: (o: Opcion) => void }) {

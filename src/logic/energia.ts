@@ -45,6 +45,8 @@ export interface Perfil {
   ajusteKcal?: number;   // ajuste aceptado en «Meta de peso» según cómo va el peso
   ajusteDesde?: string;  // YYYY-MM-DD: desde ahí se vuelve a medir el ritmo real
   salud?: Salud | null;  // «Tu salud»
+  comidas?: { id: 'des' | 'media' | 'alm' | 'snack' | 'cena'; hora: string; on: boolean }[] | null; // «Mis comidas»
+  recordar?: boolean;    // recordatorios «¿Ya desayunaste?»
 }
 
 const TRABAJO_KCAL: Record<Trabajo, number> = { sentado: 0, pie: 180, fisico: 380 };
