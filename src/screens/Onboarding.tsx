@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { Boton, Campo, Chips, Segmento, Stepper, u } from '../components/ui';
+import { Boton, Campo, Chips, FechaNacimiento, Segmento, Stepper, u } from '../components/ui';
 import { useSesion } from '../data/sesion';
-import { fmt, gasto, type Meta, type Perfil, type Sexo, type Trabajo } from '../logic/energia';
+import { edadDe, fechaValida, fmt, gasto, type Meta, type Perfil, type Sexo, type Trabajo } from '../logic/energia';
 import { C } from '../theme';
 
 type Borrador = Omit<Perfil, 'id' | 'color'>;
@@ -18,12 +18,13 @@ export function Onboarding({ primero, onCancelar }: { primero: boolean; onCancel
   const { crearPerfil } = useSesion();
   const [paso, setPaso] = useState(0);
   const [d, setD] = useState<Borrador>(INICIAL);
-  const [txt, setTxt] = useState({ edad: '30', estatura: '165', peso: '65' });
+  const [txt, setTxt] = useState({ estatura: '165', peso: '65' });
+  const [nac, setNac] = useState({ dia: '', mes: '', anio: '' });
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const set = (p: Partial<Borrador>) => setD(x => ({ ...x, ...p }));
 
-  const num = (k: 'edad' | 'estatura' | 'peso', v: string) => {
+  const num = (k: 'estatura' | 'peso', v: string) => {
     setTxt(t => ({ ...t, [k]: v }));
     const n = parseFloat(v.replace(',', '.'));
     if (!isNaN(n)) set(k === 'peso' ? { peso: n, pesoInicial: n } : { [k]: n } as Partial<Borrador>);
@@ -32,7 +33,9 @@ export function Onboarding({ primero, onCancelar }: { primero: boolean; onCancel
   const validar = () => {
     if (paso === 1) {
       if (!d.nombre.trim()) return 'Escribe el nombre de esta persona.';
-      if (!(d.edad >= 10 && d.edad <= 100)) return 'La edad debe estar entre 10 y 100 años.';
+      const f = fechaValida(nac.dia, nac.mes, nac.anio);
+      if (!f) return 'Escribe la fecha de nacimiento completa, por ejemplo 15 / 04 / 1995.';
+      if (edadDe(f) < 10 || edadDe(f) > 100) return 'Revisa el año de nacimiento.';
       if (!(d.estatura >= 100 && d.estatura <= 230)) return 'La estatura va en centímetros, por ejemplo 165.';
       if (!(d.peso >= 30 && d.peso <= 250)) return 'El peso va en kilos, por ejemplo 65.';
     }
@@ -44,8 +47,9 @@ export function Onboarding({ primero, onCancelar }: { primero: boolean; onCancel
     setError(e);
     if (e) return;
     if (paso === 1) {
+      const f = fechaValida(nac.dia, nac.mes, nac.anio)!;
       // Meta por defecto coherente con el peso escrito
-      set({ pesoMeta: d.meta === 'mantener' ? d.peso : d.meta === 'bajar' ? Math.round(d.peso - 5) : Math.round(d.peso + 3) });
+      set({ fechaNacimiento: f, edad: edadDe(f), pesoMeta: d.meta === 'mantener' ? d.peso : d.meta === 'bajar' ? Math.round(d.peso - 5) : Math.round(d.peso + 3) });
     }
     if (paso < 3) return setPaso(paso + 1);
     setGuardando(true);
@@ -78,11 +82,11 @@ export function Onboarding({ primero, onCancelar }: { primero: boolean; onCancel
             <Text style={{ fontSize: 13, color: C.muted }}>Paso 2 de 4</Text>
             <Text style={u.h1}>Tus datos</Text>
             <Campo etiqueta="Nombre" value={d.nombre} onChangeText={v => set({ nombre: v })} placeholder="¿Cómo te llamas?" autoCapitalize="words" />
+            <FechaNacimiento valor={nac} onCambio={setNac} />
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              <View style={{ flex: 1 }}><Campo etiqueta="Edad" unidad="años" value={txt.edad} onChangeText={v => num('edad', v)} keyboardType="number-pad" /></View>
               <View style={{ flex: 1 }}><Campo etiqueta="Estatura" unidad="cm" value={txt.estatura} onChangeText={v => num('estatura', v)} keyboardType="number-pad" /></View>
+              <View style={{ flex: 1 }}><Campo etiqueta="Peso actual" unidad="kg" value={txt.peso} onChangeText={v => num('peso', v)} keyboardType="decimal-pad" /></View>
             </View>
-            <Campo etiqueta="Peso actual" unidad="kg" value={txt.peso} onChangeText={v => num('peso', v)} keyboardType="decimal-pad" />
             <View style={{ gap: 6 }}>
               <Text style={u.label}>Sexo biológico (cambia el cálculo del metabolismo)</Text>
               <Segmento<Sexo> opciones={[['F', 'Mujer'], ['M', 'Hombre']]} valor={d.sexo} onCambio={v => set({ sexo: v })} />

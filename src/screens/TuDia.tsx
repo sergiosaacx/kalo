@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Boton, Campo, Chips, Segmento, u } from '../components/ui';
+import { Boton, Campo, Chips, FechaNacimiento, Segmento, u } from '../components/ui';
 import {
   CASA, EJERCICIOS, EXTRA_INICIAL, OFICIOS, RESTO, RUTINA_INICIAL, TRABAJO_COMO, TRANSPORTES, gastoPorRutina, hora12, horasEntre, horasJornada, horasSueno,
   type Casa, type Ejercicio, type Intensidad, type Ocupacion, type Resto, type Rutina, type TrabajoExtra, type Transporte,
 } from '../logic/actividad';
-import { fmt, gasto, type Sexo } from '../logic/energia';
+import { edadDe, fechaValida, fmt, gasto, type Sexo } from '../logic/energia';
 import { reconocer } from '../data/actividades';
 import { C } from '../theme';
 
@@ -158,7 +158,8 @@ function Opciones<T extends string>({ opciones, valor, onCambio }: { opciones: [
 
 export function TuDia({ onSalir }: { onSalir?: () => void }) {
   const [r, setR] = useState<Rutina>(RUTINA_INICIAL);
-  const [datos, setDatos] = useState({ edad: '30', estatura: '165', peso: '65', sexo: 'F' as Sexo });
+  const [datos, setDatos] = useState({ estatura: '165', peso: '65', sexo: 'F' as Sexo });
+  const [nac, setNac] = useState({ dia: '', mes: '', anio: '' });
   const [i, setI] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [nuevo, setNuevo] = useState<Ejercicio | null>(null);
@@ -170,12 +171,14 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
   const pantalla = pasos[Math.min(i, pasos.length - 1)];
   const total = pasos.length - 1; // sin contar el resultado
 
-  const edad = parseInt(datos.edad, 10), estatura = parseFloat(datos.estatura), peso = parseFloat(datos.peso.replace(',', '.'));
+  const fechaNac = fechaValida(nac.dia, nac.mes, nac.anio);
+  const edad = fechaNac ? edadDe(fechaNac) : 30, estatura = parseFloat(datos.estatura), peso = parseFloat(datos.peso.replace(',', '.'));
   const perfil = { id: '', nombre: '', edad, sexo: datos.sexo, estatura, peso, pesoInicial: peso, meta: 'mantener' as const, pesoMeta: peso, ritmo: 0.5, trabajo: 'pie' as const, pasos: 6000, ejercicio: 20, sueno: 7, color: '' };
 
   const validar = (): string | null => {
     if (pantalla === 'datos') {
-      if (!(edad >= 10 && edad <= 100)) return 'La edad debe estar entre 10 y 100 años.';
+      if (!fechaNac) return 'Escribe la fecha de nacimiento completa, por ejemplo 15 / 04 / 1995.';
+      if (edad < 10 || edad > 100) return 'Revisa el año de nacimiento.';
       if (!(estatura >= 100 && estatura <= 230)) return 'La estatura va en centímetros, por ejemplo 165.';
       if (!(peso >= 30 && peso <= 250)) return 'El peso va en kilos, por ejemplo 65.';
     }
@@ -235,11 +238,11 @@ export function TuDia({ onSalir }: { onSalir?: () => void }) {
         {pantalla === 'datos' && (<>
           <Text style={s.titulo}>Primero, tus datos</Text>
           <Text style={u.soft}>Con esto sabemos cuánto gasta tu cuerpo en reposo.</Text>
+          <FechaNacimiento valor={nac} onCambio={setNac} />
           <View style={{ flexDirection: 'row', gap: 10 }}>
-            <View style={{ flex: 1 }}><Campo etiqueta="Edad" unidad="años" value={datos.edad} onChangeText={v => setDatos({ ...datos, edad: v })} keyboardType="number-pad" /></View>
             <View style={{ flex: 1 }}><Campo etiqueta="Estatura" unidad="cm" value={datos.estatura} onChangeText={v => setDatos({ ...datos, estatura: v })} keyboardType="number-pad" /></View>
+            <View style={{ flex: 1 }}><Campo etiqueta="Peso" unidad="kg" value={datos.peso} onChangeText={v => setDatos({ ...datos, peso: v })} keyboardType="decimal-pad" /></View>
           </View>
-          <Campo etiqueta="Peso" unidad="kg" value={datos.peso} onChangeText={v => setDatos({ ...datos, peso: v })} keyboardType="decimal-pad" />
           <View style={{ gap: 6 }}>
             <Text style={u.label}>Sexo biológico</Text>
             <Segmento<Sexo> opciones={[['F', 'Mujer'], ['M', 'Hombre']]} valor={datos.sexo} onCambio={v => setDatos({ ...datos, sexo: v })} />

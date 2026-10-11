@@ -7,7 +7,8 @@ export type Trabajo = 'sentado' | 'pie' | 'fisico';
 export interface Perfil {
   id: string;
   nombre: string;
-  edad: number;
+  edad: number;          // se calcula de fechaNacimiento cuando la hay
+  fechaNacimiento?: string; // YYYY-MM-DD
   sexo: Sexo;
   estatura: number; // cm
   peso: number; // kg
@@ -23,6 +24,23 @@ export interface Perfil {
 }
 
 const TRABAJO_KCAL: Record<Trabajo, number> = { sentado: 0, pie: 180, fisico: 380 };
+
+// Edad cumplida a hoy desde una fecha YYYY-MM-DD
+export function edadDe(fecha: string, hoy = new Date()) {
+  const [a, m, d] = fecha.split('-').map(Number);
+  let edad = hoy.getFullYear() - a;
+  if (hoy.getMonth() + 1 < m || (hoy.getMonth() + 1 === m && hoy.getDate() < d)) edad--;
+  return edad;
+}
+
+// Día, mes y año escritos → YYYY-MM-DD, o null si la fecha no existe
+export function fechaValida(dia: string, mes: string, anio: string): string | null {
+  const d = parseInt(dia, 10), m = parseInt(mes, 10), a = parseInt(anio, 10);
+  if (!(a >= 1900 && m >= 1 && m <= 12 && d >= 1)) return null;
+  const f = new Date(a, m - 1, d);
+  if (f.getFullYear() !== a || f.getMonth() !== m - 1 || f.getDate() !== d) return null;
+  return `${a}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
 
 export const PRESUPUESTO = { des: 0.25, alm: 0.35, cena: 0.3, snack: 0.1 } as const;
 

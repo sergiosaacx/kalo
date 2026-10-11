@@ -72,6 +72,27 @@ export function Campo({ etiqueta, unidad, ...props }: TextInputProps & { etiquet
   );
 }
 
+// Fecha de nacimiento en tres campos (día, mes, año). No se muestra la edad.
+export function FechaNacimiento({ valor, onCambio }: {
+  valor: { dia: string; mes: string; anio: string }; onCambio: (v: { dia: string; mes: string; anio: string }) => void;
+}) {
+  return (
+    <View style={{ gap: 6 }}>
+      <Text style={u.label}>Fecha de nacimiento</Text>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        {([['dia', 'Día', 'DD', 2, 1], ['mes', 'Mes', 'MM', 2, 1], ['anio', 'Año', 'AAAA', 4, 1.6]] as const).map(([k, l, ph, max, flex]) => (
+          <View key={k} style={{ flex }}>
+            <View style={u.inputWrap}>
+              <TextInput value={valor[k]} onChangeText={t => onCambio({ ...valor, [k]: t.replace(/\D/g, '').slice(0, max) })}
+                placeholder={ph} placeholderTextColor={C.muted} keyboardType="number-pad" maxLength={max} style={u.input} accessibilityLabel={l} />
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 export const u = StyleSheet.create({
   boton: { minHeight: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18 },
   botonTxt: { fontSize: 16, fontWeight: '700' },
@@ -88,7 +109,8 @@ export const u = StyleSheet.create({
   label: { fontSize: 13, color: C.muted },
   unidad: { fontSize: 14, color: C.muted, fontWeight: '400' },
   inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.surface2, borderRadius: 14, paddingHorizontal: 16, gap: 8 },
-  input: { flex: 1, minHeight: 50, color: C.text, fontSize: 16, minWidth: 0 },
+  // outlineWidth 0: en la web el navegador pinta un borde blanco al escribir
+  input: { flex: 1, minHeight: 50, color: C.text, fontSize: 16, minWidth: 0, outlineWidth: 0 },
   card: { backgroundColor: C.surface, borderRadius: 22, padding: 18 },
   h1: { fontSize: 28, fontWeight: '700', letterSpacing: -0.56, color: C.text },
   soft: { fontSize: 15, color: C.soft, lineHeight: 22 },

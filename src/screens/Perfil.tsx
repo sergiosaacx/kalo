@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Boton, Campo, Segmento, u } from '../components/ui';
+import { Boton, Campo, FechaNacimiento, Segmento, u } from '../components/ui';
 import { useSesion, type PerfilActivo } from '../data/sesion';
-import type { Sexo } from '../logic/energia';
+import { edadDe, fechaValida, type Sexo } from '../logic/energia';
 import { C } from '../theme';
 
 // Perfiles de la familia + datos del perfil activo (handoff › Perfil)
@@ -25,7 +25,7 @@ export function Perfil({ nuevoPerfil }: { nuevoPerfil: () => void }) {
               <View style={[s.avatar, { backgroundColor: p.color }]}><Text style={s.avatarTxt}>{p.nombre.charAt(0).toUpperCase()}</Text></View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={s.nombre}>{p.nombre}</Text>
-                <Text style={s.sub}>{p.edad} años · {p.peso.toLocaleString('es-CO')} kg</Text>
+                <Text style={s.sub}>{p.estatura} cm · {p.peso.toLocaleString('es-CO')} kg</Text>
               </View>
               {on && <Text style={s.activo}>Activo</Text>}
             </Pressable>
@@ -44,22 +44,26 @@ export function Perfil({ nuevoPerfil }: { nuevoPerfil: () => void }) {
 }
 
 function Datos({ p, guardar }: { p: PerfilActivo; guardar: (c: Partial<PerfilActivo>) => Promise<string | null> }) {
-  const [f, setF] = useState({ nombre: p.nombre, edad: String(p.edad), estatura: String(p.estatura), peso: String(p.peso).replace('.', ','), sexo: p.sexo });
+  const [f, setF] = useState({ nombre: p.nombre, estatura: String(p.estatura), peso: String(p.peso).replace('.', ','), sexo: p.sexo });
+  const [aa, mm, dd] = (p.fechaNacimiento ?? '--').split('-');
+  const [nac, setNac] = useState({ dia: dd ? String(Number(dd)) : '', mes: mm ? String(Number(mm)) : '', anio: aa ?? '' });
+  const fechaNueva = fechaValida(nac.dia, nac.mes, nac.anio);
   const [estado, setEstado] = useState<{ tipo: 'ok' | 'error'; txt: string } | null>(null);
   const [guardando, setGuardando] = useState(false);
   useEffect(() => { if (estado?.tipo === 'ok') { const t = setTimeout(() => setEstado(null), 2500); return () => clearTimeout(t); } }, [estado]);
 
-  const cambiado = f.nombre !== p.nombre || f.edad !== String(p.edad) || f.estatura !== String(p.estatura)
+  const cambiado = f.nombre !== p.nombre || fechaNueva !== (p.fechaNacimiento ?? null) || f.estatura !== String(p.estatura)
     || parseFloat(f.peso.replace(',', '.')) !== p.peso || f.sexo !== p.sexo;
 
   const onGuardar = async () => {
-    const edad = parseInt(f.edad, 10), estatura = parseFloat(f.estatura), peso = parseFloat(f.peso.replace(',', '.'));
+    const estatura = parseFloat(f.estatura), peso = parseFloat(f.peso.replace(',', '.'));
     if (!f.nombre.trim()) return setEstado({ tipo: 'error', txt: 'Escribe un nombre.' });
-    if (!(edad >= 10 && edad <= 100)) return setEstado({ tipo: 'error', txt: 'La edad debe estar entre 10 y 100 años.' });
+    if (!fechaNueva) return setEstado({ tipo: 'error', txt: 'Escribe la fecha de nacimiento completa, por ejemplo 15 / 04 / 1995.' });
+    if (edadDe(fechaNueva) < 10 || edadDe(fechaNueva) > 100) return setEstado({ tipo: 'error', txt: 'Revisa el año de nacimiento.' });
     if (!(estatura >= 100 && estatura <= 230)) return setEstado({ tipo: 'error', txt: 'La estatura va en centímetros, por ejemplo 165.' });
     if (!(peso >= 30 && peso <= 250)) return setEstado({ tipo: 'error', txt: 'El peso va en kilos, por ejemplo 65.' });
     setGuardando(true);
-    const err = await guardar({ nombre: f.nombre.trim(), edad, estatura, peso, sexo: f.sexo });
+    const err = await guardar({ nombre: f.nombre.trim(), fechaNacimiento: fechaNueva, edad: edadDe(fechaNueva), estatura, peso, sexo: f.sexo });
     setGuardando(false);
     setEstado(err ? { tipo: 'error', txt: err } : { tipo: 'ok', txt: 'Guardado' });
   };
@@ -69,10 +73,10 @@ function Datos({ p, guardar }: { p: PerfilActivo; guardar: (c: Partial<PerfilAct
       <Text style={{ fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', color: C.muted }}>Datos de {p.nombre}</Text>
       <Campo etiqueta="Nombre" value={f.nombre} onChangeText={v => setF({ ...f, nombre: v })} autoCapitalize="words" />
       <View style={{ flexDirection: 'row', gap: 10 }}>
-        <View style={{ flex: 1 }}><Campo etiqueta="Edad" unidad="años" value={f.edad} onChangeText={v => setF({ ...f, edad: v })} keyboardType="number-pad" /></View>
         <View style={{ flex: 1 }}><Campo etiqueta="Estatura" unidad="cm" value={f.estatura} onChangeText={v => setF({ ...f, estatura: v })} keyboardType="number-pad" /></View>
+        <View style={{ flex: 1 }}><Campo etiqueta="Peso" unidad="kg" value={f.peso} onChangeText={v => setF({ ...f, peso: v })} keyboardType="decimal-pad" /></View>
       </View>
-      <Campo etiqueta="Peso" unidad="kg" value={f.peso} onChangeText={v => setF({ ...f, peso: v })} keyboardType="decimal-pad" />
+      <FechaNacimiento valor={nac} onCambio={setNac} />
       <Segmento<Sexo> opciones={[['F', 'Mujer'], ['M', 'Hombre']]} valor={f.sexo} onCambio={v => setF({ ...f, sexo: v })} />
       {estado && <Text style={estado.tipo === 'ok' ? { color: C.success, fontSize: 14 } : u.error}>{estado.txt}</Text>}
       <Boton texto="Guardar cambios" onPress={onGuardar} cargando={guardando} desactivado={!cambiado} />
