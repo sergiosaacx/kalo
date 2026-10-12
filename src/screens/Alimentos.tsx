@@ -7,8 +7,11 @@ import { guardarOpcion, tiempoTexto, useOpciones, type Opcion } from '../data/op
 import { AlimentoPicker } from '../components/AlimentoPicker';
 import { ACEITE_CASA_G, FRITOS, sugerencias, type Unidad } from '../logic/anadidos';
 import { choques, revisarItems } from '../logic/evito';
+import { Advertencia, Sellos } from '../components/Sellos';
+import { NOMBRE, UNIDAD, cruzaLimite, limitesDe, saludDelDia } from '../logic/salud';
+import { gasto } from '../logic/energia';
 import { MOMENTOS, responder, type Momento } from '../data/comidas';
-import { COMIDAS, agregarVariosAlPlan, comidaDeAhora, editarItem, hoyISO, nombreComida, quitarItem, type ComidaId, type ItemPlan } from '../data/plan';
+import { COMIDAS, agregarVariosAlPlan, comidaDeAhora, editarItem, hoyISO, nombreComida, quitarItem, usePlanDia, type ComidaId, type ItemPlan } from '../data/plan';
 import { useSesion } from '../data/sesion';
 import { fmt } from '../logic/energia';
 import { C } from '../theme';
@@ -44,6 +47,8 @@ export function Alimentos({ destino, onAgregado, registro, abrirBandeja }: {
   const [opcion, setOpcion] = useState<Opcion | null>(null);
   const { lista: opciones, recargar: recargarOpciones } = useOpciones();
   const porId = useMemo(() => new Map((lista ?? []).map(a => [a.id, a])), [lista]);
+  // Lo ya comido ese día, para avisar si lo de la bandeja hace pasar un límite (azúcar libre, sodio, grasa saturada)
+  const { items: delDia } = usePlanDia(activo?.id, registro?.fecha ?? hoyISO());
 
   const resultados = useMemo(() => {
     if (!lista) return [];
@@ -134,6 +139,7 @@ export function Alimentos({ destino, onAgregado, registro, abrirBandeja }: {
                         <Text style={s.b15} numberOfLines={1}>{a.nombre}</Text>
                         <Text style={s.muted12} numberOfLines={1}>{a.porcion_base.texto} · {fmt(a.porcion_base.gramos)} g</Text>
                         <Text style={s.muted12}>P {fq(n.p)} · C {fq(n.c)} · G {fq(n.gr)}</Text>
+                        <Sellos a={a} mini />
                       </View>
                       {enBandeja.has(a.id) ? <Text style={s.ya}>En la bandeja</Text> : <Text style={s.kcal}>{fmt(n.kcal)}</Text>}
                     </Pressable>
@@ -220,6 +226,20 @@ export function Alimentos({ destino, onAgregado, registro, abrirBandeja }: {
                 </View>
               ))}
             </ScrollView>
+            {activo && delDia && (() => {
+              const comido = delDia.filter(i => i.comido);
+              const nuevos = items.map(it => ({ alimento_id: it.alimento.id, cantidad: it.cantidad, anadidos: anadidosParaGuardar(it) }));
+              const l = limitesDe(gasto(activo).objetivo);
+              const cruza = cruzaLimite(saludDelDia(comido, porId), saludDelDia([...comido, ...nuevos], porId), l);
+              if (!cruza.length) return null;
+              const f = (n: number) => Math.round(n).toLocaleString('es-CO');
+              return (
+                <View style={s.ojo}>
+                  <Text style={s.ojoTit}>Con esto pasarías {cruza.map(c => `${c.m === 'grasaSat' ? 'la' : 'el'} ${NOMBRE[c.m]}`).join(' y ')} de hoy</Text>
+                  <Text style={s.ojoTxt}>{cruza.map(c => `Llegarías a ${f(c.valor)} de ${f(c.limite)} ${UNIDAD[c.m]} de ${NOMBRE[c.m]}.`).join(' ')} Tú decides.</Text>
+                </View>
+              );
+            })()}
             <Chips<ComidaId> opciones={COMIDAS} valor={comida} onCambio={setComida} />
             {errorListo && <Text style={u.error}>{errorListo}</Text>}
             <Boton texto={`Listo · agregar ${items.length} al ${nombre}`} onPress={listo} cargando={guardando} />
@@ -522,6 +542,8 @@ function Ficha({ a, perfilId, volver, onMedida, inicial, volverTxt = '‹ Alimen
         <Text style={s.h1}>{a.nombre}</Text>
         {a.sinonimos.length > 0 && <Text style={s.muted13}>También: {a.sinonimos.join(', ')}</Text>}
       </View>
+      <Sellos a={a} />
+      <Advertencia a={a} />
       {extra}
       {(() => {
         const al = [a, ...ads.map(x => x.alimento)].filter(x => choques(x, ev).alergia.length > 0);
@@ -676,6 +698,9 @@ const s = StyleSheet.create({
   quitarTxt: { color: C.muted, fontSize: 22 },
   opc: { paddingVertical: 11, gap: 6 },
   alergiaTxt: { fontSize: 12, fontWeight: '700', color: '#FF8A84' },
+  ojo: { backgroundColor: '#2A2210', borderWidth: 1, borderColor: C.fat, borderRadius: 16, paddingVertical: 11, paddingHorizontal: 13, gap: 3 },
+  ojoTit: { color: C.fat, fontSize: 14.5, fontWeight: '700' },
+  ojoTxt: { color: C.soft, fontSize: 12.5, lineHeight: 18 },
   evitoTxt: { fontSize: 12, fontWeight: '700', color: C.accent },
   alerta: { backgroundColor: '#2A1414', borderWidth: 1, borderColor: '#E5534B', borderRadius: 16, paddingVertical: 12, paddingHorizontal: 14, gap: 4 },
   alertaTit: { color: '#FF8A84', fontSize: 15, fontWeight: '700' },

@@ -50,6 +50,7 @@ export interface Perfil {
   gastoReal?: number | null;      // kcal/día medidas con lo que come y lo que pesa (si lo aceptó)
   gastoRealFecha?: string | null;
   pesarse?: { on: boolean; dia: number; hora: string } | null; // recordatorio semanal de pesarse (dia 0 = domingo)
+  foto?: string | null;        // foto de perfil (subida) o avatar de Kalo
   aguaMeta?: number | null;   // ml/día; null = 35 ml por kilo
   recordarAgua?: boolean;
   evito?: { alergias: string[]; evito: string[]; prefiero: string[]; alergiaAlimentos: string[]; evitoAlimentos: string[] } | null; // «Lo que evito»

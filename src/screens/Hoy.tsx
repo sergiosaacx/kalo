@@ -5,6 +5,9 @@ import { nutrientesItem, useAlimentos, type AlimentoDB } from '../data/alimentos
 import { COMIDAS, hoyISO, usePlanDia, type ComidaId, type ItemPlan } from '../data/plan';
 import { Personalizado, Semana, lunesDe, rangoTxt } from './Resumen';
 import { TarjetaAgua } from '../components/Agua';
+import { Campanita, ListaAvisos, TarjetaSalud } from '../components/SaludHoy';
+import { Avatar } from '../components/Avatar';
+import { avisosDelDia, limitesDe, saludDelDia } from '../logic/salud';
 import { sumarDias } from '../logic/peso';
 import { useSesion } from '../data/sesion';
 import { conSigno, fmt, gasto, macrosObjetivo } from '../logic/energia';
@@ -30,6 +33,7 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
   // El día que se ve (hoy, o uno anterior tocado en «Semana») y el rango de «Personalizado» para el encabezado
   const [dia, setDia] = useState(hoyISO());
   const [rangoP, setRangoP] = useState<[string, string] | null>(null);
+  const [avisosAbiertos, setAvisosAbiertos] = useState(false);
   const esHoy = dia === hoyISO();
   const { activo } = useSesion();
   const { lista } = useAlimentos();
@@ -43,6 +47,10 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
   const hoy = sumar(todos, porId, true);
   const rem = tgt - hoy.k;
   const obj = macrosObjetivo(pr, tgt);
+  // Salud del día: límites de la OMS y avisos para la campanita
+  const salud = saludDelDia(todos.filter(it => it.comido), porId);
+  const limites = limitesDe(tgt);
+  const avisos = avisosDelDia(salud, limites);
   const [aa, mm, dd] = dia.split('-').map(Number);
   const d = new Date(aa, mm - 1, dd);
   const fecha = rango === 'semana' ? rangoTxt(lunesDe(hoyISO()), sumarDias(lunesDe(hoyISO()), 6))
@@ -78,10 +86,12 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
           <Text style={s.muted13}>{fecha}</Text>
           <Text style={s.h1}>Hola, {pr.nombre}</Text>
         </View>
-        <Pressable onPress={() => irA('perfil')} style={[s.avatar, { backgroundColor: pr.color }]}>
-          <Text style={s.avatarTxt}>{pr.nombre.charAt(0)}</Text>
-        </Pressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Campanita avisos={avisos} abierta={avisosAbiertos} tocar={() => setAvisosAbiertos(v => !v)} />
+          <Pressable onPress={() => irA('perfil')}><Avatar p={pr} size={44} /></Pressable>
+        </View>
       </View>
+      {avisosAbiertos && <ListaAvisos avisos={avisos} />}
 
       <View style={s.segment}>
         {RANGOS.map(([id, l]) => (
@@ -128,6 +138,8 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
           </View>
 
           <TarjetaAgua key={dia} fecha={dia} editable={esHoy} />
+
+          <TarjetaSalud d={salud} l={limites} />
 
           <View style={[s.card, { gap: 14 }]}>
             <Text style={[s.overline, { fontSize: 12 }]}>Macronutrientes</Text>

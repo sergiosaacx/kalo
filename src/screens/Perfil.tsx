@@ -6,6 +6,8 @@ import { MetaPeso, TarjetaMeta } from './MetaPeso';
 import { MisComidas, TarjetaComidas } from './MisComidas';
 import { LoQueEvito, TarjetaEvito } from './LoQueEvito';
 import { TarjetaSalud } from '../components/Salud';
+import { Avatar } from '../components/Avatar';
+import { FotoPerfil } from '../components/FotoPerfil';
 import { useSesion, type PerfilActivo } from '../data/sesion';
 import { edadDe, errorFecha, fechaValida, type Sexo } from '../logic/energia';
 import { C } from '../theme';
@@ -32,7 +34,7 @@ export function Perfil({ nuevoPerfil, abrir }: { nuevoPerfil: () => void; abrir?
           const on = p.id === activo.id;
           return (
             <Pressable key={p.id} onPress={() => activar(p.id)} style={[s.fila, on && { borderColor: C.accent }]}>
-              <View style={[s.avatar, { backgroundColor: p.color }]}><Text style={s.avatarTxt}>{p.nombre.charAt(0).toUpperCase()}</Text></View>
+              <Avatar p={p} size={40} />
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={s.nombre}>{p.nombre}</Text>
                 <Text style={s.sub}>{p.estatura} cm · {p.peso.toLocaleString('es-CO')} kg</Text>
@@ -93,6 +95,7 @@ function Datos({ p, guardar }: { p: PerfilActivo; guardar: (c: Partial<PerfilAct
   return (
     <View style={[u.card, { gap: 12 }]}>
       <Text style={{ fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', color: C.muted }}>Datos de {p.nombre}</Text>
+      <FotoPerfil p={p} />
       <Campo etiqueta="Nombre" value={f.nombre} onChangeText={v => setF({ ...f, nombre: v })} autoCapitalize="words" />
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <View style={{ flex: 1 }}><Campo etiqueta="Estatura" unidad="cm" value={f.estatura} onChangeText={v => setF({ ...f, estatura: v })} keyboardType="number-pad" /></View>

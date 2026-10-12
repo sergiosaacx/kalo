@@ -14,7 +14,7 @@ interface PerfilDB {
   ajuste_kcal: number; ajuste_desde: string | null; salud: Salud | null;
   comidas: Perfil['comidas']; recordar: boolean;
   gasto_real: number | null; gasto_real_fecha: string | null; pesarse: Perfil['pesarse'];
-  agua_meta: number | null; recordar_agua: boolean; evito: Perfil['evito'];
+  agua_meta: number | null; recordar_agua: boolean; evito: Perfil['evito']; foto: string | null;
 }
 
 const desdeDB = (r: PerfilDB): Perfil & { activo: boolean } => ({
@@ -24,7 +24,7 @@ const desdeDB = (r: PerfilDB): Perfil & { activo: boolean } => ({
   trabajo: r.trabajo, pasos: r.pasos_dia, ejercicio: r.ejercicio_min, sueno: Number(r.sueno_h), color: r.color, activo: r.activo,
   ajusteKcal: r.ajuste_kcal ?? 0, ajusteDesde: r.ajuste_desde ?? undefined, salud: r.salud, comidas: r.comidas, recordar: r.recordar,
   gastoReal: r.gasto_real, gastoRealFecha: r.gasto_real_fecha, pesarse: r.pesarse,
-  aguaMeta: r.agua_meta, recordarAgua: r.recordar_agua, evito: r.evito,
+  aguaMeta: r.agua_meta, recordarAgua: r.recordar_agua, evito: r.evito, foto: r.foto,
 });
 
 const haciaDB = (p: Partial<Perfil>) => {
@@ -56,6 +56,7 @@ const haciaDB = (p: Partial<Perfil>) => {
   if (p.aguaMeta !== undefined) m.agua_meta = p.aguaMeta;
   if (p.recordarAgua !== undefined) m.recordar_agua = p.recordarAgua;
   if (p.evito !== undefined) m.evito = p.evito;
+  if (p.foto !== undefined) m.foto = p.foto;
   return m;
 };
 
