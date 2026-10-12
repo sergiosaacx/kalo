@@ -8,6 +8,7 @@ import { MOMENTOS, esMomento, pendienteDeHoy, type Momento } from './src/data/co
 import { comidaDeAhora, hoyISO, type ComidaId } from './src/data/plan';
 import { IconoGasto, IconoHoy, IconoMas, IconoMenu, IconoPerfil } from './src/components/Iconos';
 import { Pregunta } from './src/screens/Pregunta';
+import { medirPantalla } from './src/data/diagnostico';
 import { SesionProvider, useSesion } from './src/data/sesion';
 import { Alimentos } from './src/screens/Alimentos';
 import { Entrar } from './src/screens/Entrar';
@@ -49,6 +50,7 @@ function Raiz() {
   useEffect(() => {
     if (!listo) return;
     sincronizarNotificaciones();
+    medirPantalla(); // TEMPORAL
     if (estadoNotif() === 'preguntar' && !yaPreguntado()) setLetrero(true);
   }, [listo]);
 
@@ -137,7 +139,7 @@ function Raiz() {
         )}
       </ScrollView>
       )}
-      <SafeAreaView edges={['bottom']} style={s.tabbar}>
+      <SafeAreaView edges={['bottom']} style={s.tabbar} nativeID="barra">
         <View style={s.tabs}>
           {[TABS[0], TABS[1], null, TABS[2], TABS[3]].map(tb => {
             if (!tb) return (
