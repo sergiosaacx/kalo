@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Anillo } from '../components/Anillo';
 import { nutrientesItem, useAlimentos, type AlimentoDB } from '../data/alimentos';
 import { COMIDAS, hoyISO, usePlanDia, type ComidaId, type ItemPlan } from '../data/plan';
 import { Personalizado, Semana, lunesDe, rangoTxt } from './Resumen';
 import { TarjetaAgua } from '../components/Agua';
-import { Campanita, ListaAvisos, TarjetaSalud } from '../components/SaludHoy';
+import { Campanita, Desplegable, TarjetaSalud } from '../components/SaludHoy';
+import { notificacionesDeHoy, type Notificacion } from '../data/comidas';
 import { Avatar } from '../components/Avatar';
 import { avisosDelDia, limitesDe, saludDelDia } from '../logic/salud';
 import { sumarDias } from '../logic/peso';
@@ -34,10 +35,12 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
   const [dia, setDia] = useState(hoyISO());
   const [rangoP, setRangoP] = useState<[string, string] | null>(null);
   const [avisosAbiertos, setAvisosAbiertos] = useState(false);
+  const [notifs, setNotifs] = useState<Notificacion[]>([]);
   const esHoy = dia === hoyISO();
   const { activo } = useSesion();
   const { lista } = useAlimentos();
   const { items, alternar } = usePlanDia(activo?.id, dia);
+  useEffect(() => { if (activo?.id) notificacionesDeHoy(activo.id, hoyISO()).then(setNotifs); }, [activo?.id, avisosAbiertos]);
   if (!activo) return null;
   const pr = activo;
   const porId = new Map((lista ?? []).map(a => [a.id, a]));
@@ -77,21 +80,24 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
   ];
 
   return (
-    <View style={{ gap: 14 }}>
+    <View style={{ gap: 14, position: 'relative' }}>
+      {/* Al tocar afuera del desplegable, se cierra */}
+      {avisosAbiertos && <Pressable onPress={() => setAvisosAbiertos(false)} style={[StyleSheet.absoluteFill, { zIndex: 15, top: -40, left: -18, right: -18 }]} />}
       {aviso && esHoy && items !== null && (
         <Text style={s.aviso}>{aviso} · {rem > 0 ? `te quedan ${fmt(rem)} para hoy` : 'ya cubriste tu meta de hoy'}</Text>
       )}
-      <View style={s.header}>
+      <View style={[s.header, { position: 'relative', zIndex: 20 }]}>
         <View style={{ gap: 2 }}>
           <Text style={s.muted13}>{fecha}</Text>
           <Text style={s.h1}>Hola, {pr.nombre}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Campanita avisos={avisos} abierta={avisosAbiertos} tocar={() => setAvisosAbiertos(v => !v)} />
+          <Campanita cuantos={avisos.length + (esHoy ? notifs.filter(n => n.estado === 'enviado' && !n.momento.startsWith('agua')).length : 0)}
+            rojo={avisos.some(a => a.nivel === 'pasado')} abierta={avisosAbiertos} tocar={() => setAvisosAbiertos(v => !v)} />
           <Pressable onPress={() => irA('perfil')}><Avatar p={pr} size={44} /></Pressable>
         </View>
+        {avisosAbiertos && <Desplegable avisos={avisos} notifs={esHoy ? notifs : []} />}
       </View>
-      {avisosAbiertos && <ListaAvisos avisos={avisos} />}
 
       <View style={s.segment}>
         {RANGOS.map(([id, l]) => (

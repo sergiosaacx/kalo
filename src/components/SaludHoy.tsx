@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { u } from './ui';
 import { IconoCampana } from './Iconos';
 import { type Aviso, type Dia, type Limites } from '../logic/salud';
+import type { Notificacion } from '../data/comidas';
 import { C } from '../theme';
 
 const ROJO = '#E5534B';
@@ -36,31 +37,51 @@ export function TarjetaSalud({ d, l }: { d: Dia; l: Limites }) {
   );
 }
 
-// Campanita junto a la foto: cuántos avisos hay hoy y, al tocarla, la lista
-export function Campanita({ avisos, abierta, tocar }: { avisos: Aviso[]; abierta: boolean; tocar: () => void }) {
-  const pasado = avisos.some(a => a.nivel === 'pasado');
+// Campanita junto a la foto: el número es lo que necesita atención (avisos de salud + preguntas sin responder)
+export function Campanita({ cuantos, rojo, abierta, tocar }: { cuantos: number; rojo: boolean; abierta: boolean; tocar: () => void }) {
   return (
-    <Pressable onPress={tocar} style={[s.campana, abierta && { backgroundColor: C.surface3 }]} accessibilityLabel="Avisos de hoy" hitSlop={4}>
-      <IconoCampana color={avisos.length ? C.text : C.muted} size={22} />
-      {avisos.length > 0 && <View style={[s.badge, { backgroundColor: pasado ? ROJO : C.fat }]}><Text style={s.badgeTxt}>{avisos.length}</Text></View>}
+    <Pressable onPress={tocar} style={[s.campana, abierta && { backgroundColor: C.surface3 }]} accessibilityLabel="Notificaciones" hitSlop={4}>
+      <IconoCampana color={cuantos ? C.text : C.muted} size={22} />
+      {cuantos > 0 && <View style={[s.badge, { backgroundColor: rojo ? ROJO : C.fat }]}><Text style={s.badgeTxt}>{cuantos}</Text></View>}
     </Pressable>
   );
 }
 
-export function ListaAvisos({ avisos }: { avisos: Aviso[] }) {
+const PREGUNTA: Record<string, string> = {
+  des: '¿Ya desayunaste?', media: '¿Ya comiste algo a media mañana?', alm: '¿Ya almorzaste?', snack: '¿Ya comiste tu snack?', cena: '¿Ya cenaste?', peso: 'Hoy toca pesarte',
+};
+const ESTADO: Record<string, string> = { enviado: 'Sin responder', respondido: 'Respondida', pospuesto: 'Te la recuerda en 30 min' };
+
+// Desplegable flotante bajo la campanita, como el centro de notificaciones de cualquier app
+export function Desplegable({ avisos, notifs }: { avisos: Aviso[]; notifs: Notificacion[] }) {
+  const nada = avisos.length === 0 && notifs.length === 0;
   return (
-    <View style={s.panel}>
-      <Text style={s.panelTit}>Avisos de hoy</Text>
-      {avisos.length === 0 ? <Text style={s.nota}>Todo en orden: no te has pasado de azúcar libre, sodio ni grasa saturada.</Text>
-        : avisos.map((a, k) => (
-          <View key={k} style={[s.aviso, k > 0 && { borderTopWidth: 1, borderTopColor: C.divider }]}>
-            <View style={[s.punto, { backgroundColor: a.nivel === 'pasado' ? ROJO : C.fat }]} />
+    <View style={s.desp}>
+      <View style={s.pico} />
+      <Text style={s.panelTit}>Notificaciones</Text>
+      {nada && <Text style={s.nota}>No tienes notificaciones hoy. Vas bien con el azúcar, el sodio y la grasa saturada.</Text>}
+      {avisos.map((a, k) => (
+        <View key={`a${k}`} style={[s.aviso, k > 0 && s.borde]}>
+          <View style={[s.punto, { backgroundColor: a.nivel === 'pasado' ? ROJO : C.fat }]} />
+          <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+            <Text style={[s.avisoTit, { color: a.nivel === 'pasado' ? '#FF8A84' : C.fat }]}>{a.titulo}</Text>
+            <Text style={s.avisoTxt}>{a.texto}</Text>
+          </View>
+        </View>
+      ))}
+      {notifs.map((n, k) => {
+        const agua = n.momento.startsWith('agua');
+        const pend = n.estado === 'enviado' && !agua;
+        return (
+          <View key={`n${k}`} style={[s.aviso, (avisos.length > 0 || k > 0) && s.borde]}>
+            <View style={[s.punto, { backgroundColor: pend ? C.accent : C.surface3 }]} />
             <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-              <Text style={[s.avisoTit, { color: a.nivel === 'pasado' ? '#FF8A84' : C.fat }]}>{a.titulo}</Text>
-              <Text style={s.avisoTxt}>{a.texto}</Text>
+              <Text style={[s.avisoTit, { color: pend ? C.text : C.soft }]}>{agua ? '¿Ya tomaste agua?' : PREGUNTA[n.momento] ?? 'Kalo'}</Text>
+              <Text style={s.avisoTxt}>{n.hora}{agua ? '' : ` · ${ESTADO[n.estado] ?? ''}`}</Text>
             </View>
           </View>
-        ))}
+        );
+      })}
     </View>
   );
 }
@@ -76,7 +97,10 @@ const s = StyleSheet.create({
   campana: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: 4, right: 3, minWidth: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 2, borderColor: C.bg },
   badgeTxt: { color: '#fff', fontSize: 10.5, fontWeight: '800' },
-  panel: { backgroundColor: C.surface, borderRadius: 20, borderWidth: 1, borderColor: C.border, padding: 14, gap: 8 },
+  desp: { position: 'absolute', top: 54, right: 0, width: 330, maxWidth: '100%', backgroundColor: C.surface2, borderRadius: 18, borderWidth: 1, borderColor: C.border, padding: 14, gap: 6, zIndex: 30,
+    shadowColor: '#000', shadowOpacity: 0.6, shadowRadius: 24, shadowOffset: { width: 0, height: 12 }, elevation: 12 },
+  pico: { position: 'absolute', top: -7, right: 62, width: 14, height: 14, backgroundColor: C.surface2, borderLeftWidth: 1, borderTopWidth: 1, borderColor: C.border, transform: [{ rotate: '45deg' }] },
+  borde: { borderTopWidth: 1, borderTopColor: C.divider },
   panelTit: { fontSize: 15, fontWeight: '700', color: C.text },
   aviso: { flexDirection: 'row', gap: 10, paddingVertical: 8 },
   punto: { width: 8, height: 8, borderRadius: 4, marginTop: 6 },

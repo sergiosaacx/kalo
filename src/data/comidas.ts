@@ -36,6 +36,17 @@ export async function responder(perfilId: string, fecha: string, momento: Moment
   await supabase.from('recordatorios').upsert({ perfil_id: perfilId, fecha, momento, estado, pospuesto_hasta, actualizado: new Date().toISOString() });
 }
 
+// Lo que Kalo le mandó hoy (para la campanita): comidas, pesarse y agua, con la hora y qué pasó
+export interface Notificacion { momento: string; estado: string; hora: string }
+export async function notificacionesDeHoy(perfilId: string, fecha: string): Promise<Notificacion[]> {
+  const { data } = await supabase.from('recordatorios').select('momento, estado, actualizado')
+    .eq('perfil_id', perfilId).eq('fecha', fecha).neq('estado', 'saltado').order('actualizado', { ascending: false });
+  return (data ?? []).map(r => {
+    const d = new Date(r.actualizado);
+    return { momento: r.momento, estado: r.estado, hora: horaTexto(`${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`) };
+  });
+}
+
 // La comida que se le preguntó hoy y aún no respondió (la más reciente), para preguntarle al abrir Kalo
 export async function pendienteDeHoy(perfilId: string, fecha: string): Promise<Momento | null> {
   const { data } = await supabase.from('recordatorios').select('momento, actualizado')
