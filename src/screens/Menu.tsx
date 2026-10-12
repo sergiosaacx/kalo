@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { AlimentoPicker } from '../components/AlimentoPicker';
 import { Boton, Chips, Segmento, u } from '../components/ui';
-import { nutrientes, useAlimentos, type AlimentoDB } from '../data/alimentos';
+import { nutrientes, nutrientesItem, useAlimentos, type AlimentoDB } from '../data/alimentos';
 import { DIFICULTAD, aplicarAlDia, borrarOpcion, guardarOpcion, tiempoTexto, useOpciones, type Dificultad, type ItemOpcion, type Opcion } from '../data/opciones';
 import { COMIDAS, agregarAlPlan, comidaDeAhora, hoyISO, nombreComida, usePlanDia, type ComidaId } from '../data/plan';
 import { useSesion } from '../data/sesion';
@@ -124,7 +124,7 @@ export function Menu() {
                     <Text style={s.itemNombre} numberOfLines={1}>{f.nombre}</Text>
                     <Text style={s.muted12}>{it.cantidad === 1 ? f.porcion_base.texto : `${fq(it.cantidad)} × ${f.porcion_base.texto}`}</Text>
                   </View>
-                  <Text style={s.itemKcal}>{fmt(nutrientes(f, it.cantidad).kcal)}</Text>
+                  <Text style={s.itemKcal}>{fmt(nutrientesItem(it).kcal)}</Text>
                 </View>
               );
             })}
@@ -334,7 +334,7 @@ function Semana({ dia, setDia, plan, porId, objetivo, presupuesto, armar, cambia
                     <Text style={s.itemNombre} numberOfLines={1}>{f.nombre}</Text>
                     <Text style={s.muted12} numberOfLines={1}>{it.cantidad === 1 ? f.porcion_base.texto : `${fq(it.cantidad)} × ${f.porcion_base.texto}`}</Text>
                   </View>
-                  <Text style={s.itemKcal}>{fmt(nutrientes(f, it.cantidad).kcal)}</Text>
+                  <Text style={s.itemKcal}>{fmt(nutrientesItem(it).kcal)}</Text>
                   <Pressable onPress={() => plan.quitar(it.id)} style={s.x}><Text style={s.xTxt}>×</Text></Pressable>
                 </View>
               );
@@ -391,7 +391,7 @@ function Constructor({ b, set, t, presupuesto, porId, dia, agregar, reemplazar, 
               {f.foto_url ? <Image source={{ uri: f.foto_url }} style={s.thumb} /> : <View style={s.thumb} />}
               <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                 <Text style={s.itemNombre} numberOfLines={1}>{f.nombre}</Text>
-                <Text style={s.muted12} numberOfLines={1}>{fq(it.cantidad)} × {f.porcion_base.texto} · {fmt(nutrientes(f, it.cantidad).kcal)} kcal</Text>
+                <Text style={s.muted12} numberOfLines={1}>{fq(it.cantidad)} × {f.porcion_base.texto} · {fmt(nutrientesItem(it).kcal)} kcal</Text>
                 <View style={{ flexDirection: 'row', gap: 16 }}>
                   <Pressable onPress={() => reemplazar(k)} hitSlop={8}><Text style={s.accion}>Cambiar</Text></Pressable>
                   <Pressable onPress={() => set({ ...b, items: b.items.filter((_, j) => j !== k) })} hitSlop={8}><Text style={[s.accion, { color: C.muted }]}>Quitar</Text></Pressable>

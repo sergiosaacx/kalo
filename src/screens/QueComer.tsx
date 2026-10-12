@@ -7,7 +7,7 @@ import { agregarVariosAlPlan, frecuenciaComidas, nombreComida, usePlanDia, type 
 import { useSesion } from '../data/sesion';
 import { fmt, gasto, macrosObjetivo } from '../logic/energia';
 import { armarBloques, porcionTexto, type Bloque, type Etiqueta, type Sugerencia } from '../logic/queComer';
-import { nutrientes } from '../data/alimentos';
+import { nutrientesItem } from '../data/alimentos';
 import { C } from '../theme';
 
 // En esta hoja la comida «snack» se llama en singular, como en «Mis comidas»
@@ -34,7 +34,7 @@ export function QueComer({ cerrar, onAgregado }: { cerrar: () => void; onAgregad
     if (!listo) return null;
     // Lo mismo que muestra Hoy: lo marcado como comido
     const comido = items.filter(i => i.comido && porId.has(i.alimento_id))
-      .reduce((t, i) => { const n = nutrientes(porId.get(i.alimento_id)!, i.cantidad); return { k: t.k + n.kcal, p: t.p + n.p }; }, { k: 0, p: 0 });
+      .reduce((t, i) => { const n = nutrientesItem(i, porId); return { k: t.k + n.kcal, p: t.p + n.p }; }, { k: 0, p: 0 });
     const objetivo = gasto(activo).objetivo;
     const restante = Math.round(objetivo - comido.k);
     const faltaProteina = Math.round(macrosObjetivo(activo, objetivo).proteina - comido.p);

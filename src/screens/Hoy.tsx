@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Anillo } from '../components/Anillo';
-import { nutrientes, useAlimentos, type AlimentoDB } from '../data/alimentos';
+import { nutrientesItem, useAlimentos, type AlimentoDB } from '../data/alimentos';
 import { COMIDAS, usePlanDia, type ComidaId, type ItemPlan } from '../data/plan';
 import { useSesion } from '../data/sesion';
 import { conSigno, fmt, gasto, macrosObjetivo } from '../logic/energia';
@@ -15,7 +15,7 @@ function sumar(items: ItemPlan[], porId: Map<string, AlimentoDB>, soloComido: bo
   return items.reduce((a, it) => {
     const f = porId.get(it.alimento_id);
     if (!f || (soloComido && !it.comido)) return a;
-    const n = nutrientes(f, it.cantidad);
+    const n = nutrientesItem(it, porId);
     a.k += n.kcal; a.p += n.p; a.c += n.c; a.g += n.gr;
     return a;
   }, { k: 0, p: 0, c: 0, g: 0 });
@@ -154,7 +154,8 @@ export function Hoy({ irA, agregarA, verRestante }: { irA: (tab: string) => void
                 {delaComida.map(it => {
                   const f = porId.get(it.alimento_id);
                   if (!f) return null;
-                  const n = nutrientes(f, it.cantidad);
+                  const n = nutrientesItem(it, porId);
+                  const ad = (it.anadidos ?? []).map(x => porId.get(x.alimento_id)?.nombre.toLowerCase()).filter(Boolean);
                   const op = it.comido ? 1 : 0.6;
                   const q = it.cantidad;
                   return (
@@ -169,6 +170,7 @@ export function Hoy({ irA, agregarA, verRestante }: { irA: (tab: string) => void
                         <Text style={[s.muted13, { fontSize: 12 }]} numberOfLines={1}>
                           {q === 1 ? f.porcion_base.texto : `${q.toLocaleString('es-CO')} × ${f.porcion_base.texto}`}
                         </Text>
+                        {ad.length > 0 && <Text style={[s.muted13, { fontSize: 12, color: C.fat }]} numberOfLines={1}>+ {ad.join(', ')}</Text>}
                       </View>
                       <Text style={[s.b14, { opacity: op }]}>{fmt(n.kcal)}</Text>
                     </View>

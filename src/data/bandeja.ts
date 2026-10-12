@@ -1,9 +1,17 @@
 // Bandeja: los alimentos que se van agregando a una comida antes de tocar «Listo».
 // Vive fuera de las pantallas para que la barra de abajo (en App) y el buscador la compartan.
 import { useEffect, useState } from 'react';
-import type { AlimentoDB } from './alimentos';
+import { nutrientes, type AlimentoDB } from './alimentos';
 
-export interface ItemBandeja { alimento: AlimentoDB; cantidad: number; texto: string }
+export interface AnadidoBandeja { alimento: AlimentoDB; cantidad: number; texto: string }
+export interface ItemBandeja { alimento: AlimentoDB; cantidad: number; texto: string; anadidos?: AnadidoBandeja[] }
+
+// Calorías de un ítem de la bandeja con sus añadidos
+export const kcalBandeja = (it: ItemBandeja) =>
+  nutrientes(it.alimento, it.cantidad).kcal + (it.anadidos ?? []).reduce((t, x) => t + nutrientes(x.alimento, x.cantidad).kcal, 0);
+// Para guardar: los añadidos van como { alimento_id, cantidad }
+export const anadidosParaGuardar = (it: ItemBandeja) =>
+  it.anadidos?.length ? it.anadidos.map(x => ({ alimento_id: x.alimento.id, cantidad: x.cantidad })) : null;
 
 let items: ItemBandeja[] = [];
 let ultimo: { texto: string; en: number } | null = null; // para el aviso «… en la bandeja»

@@ -1,6 +1,6 @@
 // «¿Qué como para completar?» (tocar «Restante» en Hoy): reparte lo que falta entre las comidas que quedan
 // y propone opciones en la porción que toca. Aprende de lo que la persona anota.
-import { nutrientes, type AlimentoDB } from '../data/alimentos';
+import { nutrientesItem, type AlimentoDB } from '../data/alimentos';
 import { MOMENTOS, horarioDe } from '../data/comidas';
 import type { ItemOpcion, Opcion } from '../data/opciones';
 import type { ComidaId, ItemPlan } from '../data/plan';
@@ -47,7 +47,7 @@ export function armarBloques(args: {
     const candidatas: Sugerencia[] = [];
     for (const o of opciones) {
       if (o.comida !== comida || !o.items.length || !o.items.every(i => porId.has(i.alimento_id))) continue;
-      const base = o.items.reduce((t, i) => { const n = nutrientes(porId.get(i.alimento_id)!, i.cantidad); return { k: t.k + n.kcal, p: t.p + n.p }; }, { k: 0, p: 0 });
+      const base = o.items.reduce((t, i) => { const n = nutrientesItem(i, porId); return { k: t.k + n.kcal, p: t.p + n.p }; }, { k: 0, p: 0 });
       if (base.k <= 0) continue;
       const factor = porcionDe(meta / base.k);
       const veces = o.items.reduce((t, i) => t + (frecuencia.get(`${comida}|${i.alimento_id}`) ?? 0), 0);

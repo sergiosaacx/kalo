@@ -37,6 +37,16 @@ export const fotoDe = (a: AlimentoDB) => a.foto_url ?? null;
 export const sinTildes = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 // Nutrientes de una cantidad (en porciones base)
+// «Añadidos»: lo que se le pone a un alimento (panela al café, aceite al arroz, lo de un batido)
+export interface Anadido { alimento_id: string; cantidad: number }
+
+// Un alimento con sus añadidos: suma todo (lo que no esté en el catálogo no cuenta)
+export function nutrientesItem(it: { alimento_id: string; cantidad: number; anadidos?: Anadido[] | null }, porId: Map<string, AlimentoDB> = mapaCache()) {
+  const partes = [it, ...(it.anadidos ?? [])].filter(x => porId.has(x.alimento_id)).map(x => nutrientes(porId.get(x.alimento_id)!, x.cantidad));
+  const n = (k: string) => partes.reduce((t, x) => t + x.n(k), 0);
+  return { g: partes.reduce((t, x) => t + x.g, 0), kcal: n('kcal'), p: n('proteina_g'), c: n('carbos_g'), gr: n('grasa_g'), n };
+}
+
 export function nutrientes(a: AlimentoDB, cantidad: number) {
   const g = a.porcion_base.gramos * cantidad;
   const n = (k: string) => (a.por_100g[k] ?? 0) * g / 100;
@@ -45,6 +55,9 @@ export function nutrientes(a: AlimentoDB, cantidad: number) {
 
 // Se descargan una vez por sesión: son ~360 alimentos
 let cache: AlimentoDB[] | null = null;
+let mapa: Map<string, AlimentoDB> | null = null;
+// El catálogo como mapa por id (para sumar añadidos donde no hay uno a la mano)
+export const mapaCache = () => (mapa ??= new Map((cache ?? []).map(a => [a.id, a])));
 let pendiente: Promise<AlimentoDB[]> | null = null;
 function cargar() {
   if (cache) return Promise.resolve(cache);
@@ -52,6 +65,7 @@ function cargar() {
     const { data, error } = await supabase.from('alimentos').select('*').order('nombre');
     if (error) { pendiente = null; throw error; }
     cache = data as AlimentoDB[];
+    mapa = null;
     return cache;
   })();
   return pendiente;

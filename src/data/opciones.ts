@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type { ComidaId } from './plan';
+import type { Anadido } from './alimentos';
 
-export interface ItemOpcion { alimento_id: string; cantidad: number }
+export interface ItemOpcion { alimento_id: string; cantidad: number; anadidos?: Anadido[] | null }
 export interface Opcion {
   id: string;
   comida: ComidaId;
@@ -23,12 +24,12 @@ const oyentes = new Set<(o: Opcion[]) => void>();
 
 async function cargar() {
   const { data, error } = await supabase.from('opciones')
-    .select('id, comida, nombre, fuente, descripcion, tiempo_min, dificultad, creado, opcion_items(alimento_id, cantidad, orden)')
+    .select('id, comida, nombre, fuente, descripcion, tiempo_min, dificultad, creado, opcion_items(alimento_id, cantidad, orden, anadidos)')
     .order('fuente', { ascending: false }).order('creado', { ascending: false });
   if (error) return cache ?? [];
   cache = (data ?? []).map(o => ({
     id: o.id, comida: o.comida, nombre: o.nombre, fuente: o.fuente, descripcion: o.descripcion, tiempo_min: o.tiempo_min, dificultad: o.dificultad,
-    items: [...(o.opcion_items ?? [])].sort((a, b) => a.orden - b.orden).map(i => ({ alimento_id: i.alimento_id, cantidad: Number(i.cantidad) })),
+    items: [...(o.opcion_items ?? [])].sort((a, b) => a.orden - b.orden).map(i => ({ alimento_id: i.alimento_id, cantidad: Number(i.cantidad), anadidos: i.anadidos ?? null })),
   })) as Opcion[];
   oyentes.forEach(f => f(cache!));
   return cache;
@@ -53,7 +54,7 @@ const guardarItems = async (opcionId: string, items: ItemOpcion[]) => {
   await supabase.from('opcion_items').delete().eq('opcion_id', opcionId);
   if (!items.length) return null;
   const { error } = await supabase.from('opcion_items')
-    .insert(items.map((i, k) => ({ opcion_id: opcionId, alimento_id: i.alimento_id, cantidad: i.cantidad, orden: k })));
+    .insert(items.map((i, k) => ({ opcion_id: opcionId, alimento_id: i.alimento_id, cantidad: i.cantidad, anadidos: i.anadidos ?? null, orden: k })));
   return error;
 };
 
@@ -95,7 +96,7 @@ export async function aplicarVarios(perfilId: string, entradas: { fecha: string;
   if (error || !planes) return 'No pudimos repartir el menú. Revisa tu conexión.';
   const idDe = new Map(planes.map(p => [`${p.fecha}|${p.comida}`, p.id as string]));
   await supabase.from('plan_items').delete().in('plan_id', [...idDe.values()]);
-  const filas = entradas.flatMap(e => e.items.map((i, k) => ({ plan_id: idDe.get(`${e.fecha}|${e.comida}`), alimento_id: i.alimento_id, cantidad: i.cantidad, orden: k })));
+  const filas = entradas.flatMap(e => e.items.map((i, k) => ({ plan_id: idDe.get(`${e.fecha}|${e.comida}`), alimento_id: i.alimento_id, cantidad: i.cantidad, anadidos: i.anadidos ?? null, orden: k })));
   const { error: e2 } = await supabase.from('plan_items').insert(filas);
   return e2 ? 'Se repartieron los días, pero no todos los alimentos. Inténtalo de nuevo.' : null;
 }
@@ -110,7 +111,7 @@ export async function aplicarAlDia(perfilId: string, fecha: string, comida: Comi
   await supabase.from('plan_items').delete().eq('plan_id', plan.id);
   if (items.length) {
     const { error: e2 } = await supabase.from('plan_items')
-      .insert(items.map((i, k) => ({ plan_id: plan.id, alimento_id: i.alimento_id, cantidad: i.cantidad, orden: k })));
+      .insert(items.map((i, k) => ({ plan_id: plan.id, alimento_id: i.alimento_id, cantidad: i.cantidad, anadidos: i.anadidos ?? null, orden: k })));
     if (e2) return 'No pudimos copiar los alimentos. Inténtalo de nuevo.';
   }
   return null;

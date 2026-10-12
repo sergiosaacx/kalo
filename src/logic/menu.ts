@@ -1,5 +1,5 @@
 // Utilidades compartidas por las vistas del Menú (semana, calendario, opciones, recomendación)
-import { nutrientes, type AlimentoDB } from '../data/alimentos';
+import { nutrientesItem, type AlimentoDB } from '../data/alimentos';
 import type { ItemOpcion } from '../data/opciones';
 import { hoyISO } from '../data/plan';
 import { conSigno } from './energia';
@@ -21,7 +21,7 @@ export function totales(items: ItemOpcion[], porId: Mapa) {
   return items.reduce((a, it) => {
     const f = porId.get(it.alimento_id);
     if (!f) return a;
-    const n = nutrientes(f, it.cantidad);
+    const n = nutrientesItem(it, porId);
     a.k += n.kcal; a.p += n.p; a.c += n.c; a.g += n.gr; a.fib += n.n('fibra_g');
     return a;
   }, { k: 0, p: 0, c: 0, g: 0, fib: 0 });

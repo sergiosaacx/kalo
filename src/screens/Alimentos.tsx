@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Boton, Chips, Segmento, u } from '../components/ui';
-import { CATEGORIAS, MINERALES, VITAMINAS, fotoDe, nutrientes, sinTildes, useAlimentos, type AlimentoDB } from '../data/alimentos';
-import { bandeja, useBandeja, type ItemBandeja } from '../data/bandeja';
-import { tiempoTexto, useOpciones, type Opcion } from '../data/opciones';
+import { CATEGORIAS, MINERALES, VITAMINAS, fotoDe, mapaCache, nutrientes, nutrientesItem, sinTildes, useAlimentos, type AlimentoDB } from '../data/alimentos';
+import { anadidosParaGuardar, bandeja, kcalBandeja, useBandeja, type AnadidoBandeja, type ItemBandeja } from '../data/bandeja';
+import { guardarOpcion, tiempoTexto, useOpciones, type Opcion } from '../data/opciones';
+import { AlimentoPicker } from '../components/AlimentoPicker';
+import { ACEITE_CASA_G, FRITOS, sugerencias, type Unidad } from '../logic/anadidos';
 import { MOMENTOS, responder, type Momento } from '../data/comidas';
 import { COMIDAS, agregarVariosAlPlan, comidaDeAhora, hoyISO, nombreComida, type ComidaId } from '../data/plan';
 import { useSesion } from '../data/sesion';
@@ -35,11 +37,11 @@ export function Alimentos({ destino, onAgregado, registro, abrirBandeja }: {
   const [guardando, setGuardando] = useState(false);
   const [errorListo, setErrorListo] = useState<string | null>(null);
   // Lo que se va a agregar desde la ficha (cantidad en porciones base + cómo se lee)
-  const [elegido, setElegido] = useState<{ cantidad: number; texto: string } | null>(null);
+  const [elegido, setElegido] = useState<Elegido | null>(null);
   // «Mis opciones»: una opción completa entra a la bandeja de una vez
   const [vista, setVista] = useState<'alimentos' | 'opciones'>('alimentos');
   const [opcion, setOpcion] = useState<Opcion | null>(null);
-  const { lista: opciones } = useOpciones();
+  const { lista: opciones, recargar: recargarOpciones } = useOpciones();
   const porId = useMemo(() => new Map((lista ?? []).map(a => [a.id, a])), [lista]);
 
   const resultados = useMemo(() => {
@@ -49,19 +51,31 @@ export function Alimentos({ destino, onAgregado, registro, abrirBandeja }: {
   }, [lista, query]);
 
   const enBandeja = new Set(items.map(it => it.alimento.id));
-  const totalKcal = items.reduce((t, it) => t + nutrientes(it.alimento, it.cantidad).kcal, 0);
+  const totalKcal = items.reduce((t, it) => t + kcalBandeja(it), 0);
+  // Tus opciones guardadas también salen al buscar (p. ej. «Mi batido»)
+  const misOpciones = useMemo(() => {
+    const q = sinTildes(query.trim());
+    return q && opciones ? opciones.filter(o => o.fuente !== 'kalo' && o.items.length > 0 && sinTildes(o.nombre).includes(q)) : [];
+  }, [opciones, query]);
   const nombre = nombreComida(comida).toLowerCase();
 
   const agregar = () => {
     if (!abierto || !elegido) return;
-    bandeja.agregar({ alimento: abierto, ...elegido });
+    const it: ItemBandeja = { alimento: abierto, cantidad: elegido.cantidad, texto: elegido.texto, anadidos: elegido.anadidos };
+    bandeja.agregar(it);
+    if (activo) recordarAnadidos(activo.id, abierto.id, elegido.recordar);
+    // «Guardarlo como mío»: queda como opción propia de esta comida (sale en «Mis opciones» y al buscar)
+    if (elegido.guardarComo) {
+      guardarOpcion({ comida, nombre: elegido.guardarComo, items: [{ alimento_id: abierto.id, cantidad: it.cantidad, anadidos: anadidosParaGuardar(it) }], tiempo_min: null, dificultad: null })
+        .then(() => recargarOpciones());
+    }
     setAbierto(null);
   };
   const listo = async () => {
     if (!activo || items.length === 0) return;
     setGuardando(true);
     setErrorListo(null);
-    const e = await agregarVariosAlPlan(activo.id, comida, items.map(it => ({ alimento_id: it.alimento.id, cantidad: it.cantidad })), registro?.fecha ?? hoyISO(), !!registro);
+    const e = await agregarVariosAlPlan(activo.id, comida, items.map(it => ({ alimento_id: it.alimento.id, cantidad: it.cantidad, anadidos: anadidosParaGuardar(it) })), registro?.fecha ?? hoyISO(), !!registro);
     setGuardando(false);
     if (e) { setErrorListo(e); return; }
     if (registro) await responder(activo.id, registro.fecha, registro.momento, 'respondido');
@@ -74,7 +88,7 @@ export function Alimentos({ destino, onAgregado, registro, abrirBandeja }: {
   return (
     <View style={{ flex: 1 }}>
       <ScrollView key={abierto?.id ?? 'lista'} style={{ flex: 1 }} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
-        {abierto ? <Ficha a={abierto} volver={() => setAbierto(null)} onMedida={setElegido} /> : (
+        {abierto ? <Ficha a={abierto} perfilId={activo?.id} volver={() => setAbierto(null)} onMedida={setElegido} /> : (
           <View style={{ gap: 14 }}>
             <View style={{ gap: 2, paddingTop: 4 }}>
               <Text style={s.muted13}>{destino || items.length > 0 ? `Agregando a ${nombre} de hoy` : lista ? `${lista.length} alimentos` : 'Cargando…'}</Text>
@@ -86,6 +100,24 @@ export function Alimentos({ destino, onAgregado, registro, abrirBandeja }: {
             <TextInput
               value={query} onChangeText={setQuery} placeholder="Busca un alimento: arepa, lulo, pollo…"
               placeholderTextColor={C.muted} style={s.input} autoCorrect={false} />
+            {misOpciones.length > 0 && (
+              <View style={[s.card, { paddingVertical: 4 }]}>
+                <Text style={[s.muted12, { paddingTop: 8 }]}>Tus opciones</Text>
+                {misOpciones.slice(0, 5).map((o, i) => {
+                  const its = itemsDe(o, porId);
+                  return (
+                    <Pressable key={o.id} onPress={() => setOpcion(o)} style={[s.row, i > 0 && s.rowBorde]}>
+                      {its[0] ? <Miniatura a={its[0].alimento} size={56} /> : null}
+                      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                        <Text style={s.b15} numberOfLines={1}>{o.nombre}</Text>
+                        <Text style={s.muted12} numberOfLines={1}>Tuya · {nombreComida(o.comida)}</Text>
+                      </View>
+                      <Text style={s.kcal}>{fmt(kcalDe(its))}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
             {error ? <Text style={s.soft}>{error}</Text> : !lista ? (
               <ActivityIndicator color={C.accent} style={{ marginTop: 30 }} />
             ) : resultados.length === 0 ? (
@@ -174,9 +206,12 @@ export function Alimentos({ destino, onAgregado, registro, abrirBandeja }: {
                   <Miniatura a={it.alimento} size={46} />
                   <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                     <Text style={s.b15} numberOfLines={1}>{it.alimento.nombre}</Text>
-                    <Text style={s.muted12} numberOfLines={1}>{it.texto}</Text>
+                    <Text style={s.muted12} numberOfLines={1}>{it.texto}{FRITOS.has(it.alimento.id) ? ' · ya incluye el aceite' : ''}</Text>
+                    {(it.anadidos ?? []).map((x, k) => (
+                      <Text key={k} style={s.extra} numberOfLines={1}>+ {x.alimento.nombre.toLowerCase()} {x.texto} · {fmt(nutrientes(x.alimento, x.cantidad).kcal)} kcal</Text>
+                    ))}
                   </View>
-                  <Text style={s.kcal}>{fmt(nutrientes(it.alimento, it.cantidad).kcal)}</Text>
+                  <Text style={s.kcal}>{fmt(kcalBandeja(it))}</Text>
                   <Pressable onPress={() => { bandeja.quitar(i); if (items.length === 1) setHoja(false); }} style={s.quitar} hitSlop={6}>
                     <Text style={s.quitarTxt}>×</Text>
                   </Pressable>
@@ -198,8 +233,28 @@ const textoCantidad = (a: AlimentoDB, cantidad: number) =>
   cantidad === 1 ? a.porcion_base.texto : `${fq(cantidad)} × ${a.porcion_base.texto}`;
 export const itemsDe = (o: Opcion, porId: Map<string, AlimentoDB>): ItemBandeja[] => o.items
   .filter(i => porId.has(i.alimento_id))
-  .map(i => { const a = porId.get(i.alimento_id)!; return { alimento: a, cantidad: i.cantidad, texto: textoCantidad(a, i.cantidad) }; });
-export const kcalDe = (its: ItemBandeja[]) => its.reduce((t, it) => t + nutrientes(it.alimento, it.cantidad).kcal, 0);
+  .map(i => {
+    const a = porId.get(i.alimento_id)!;
+    const anadidos = (i.anadidos ?? []).filter(x => porId.has(x.alimento_id))
+      .map(x => { const b = porId.get(x.alimento_id)!; return { alimento: b, cantidad: x.cantidad, texto: `${fmt(b.porcion_base.gramos * x.cantidad)} g` }; });
+    return { alimento: a, cantidad: i.cantidad, texto: textoCantidad(a, i.cantidad), anadidos };
+  });
+export const kcalDe = (its: ItemBandeja[]) => its.reduce((t, it) => t + kcalBandeja(it), 0);
+
+// Lo que se recuerda por persona y alimento: «la abuela toma el café con 2 cucharaditas de panela»
+interface Recuerdo { alimento_id: string; unidades: number; casa?: boolean }
+const claveRecuerdo = (perfilId: string, alimentoId: string) => `kalo_anadidos_${perfilId}_${alimentoId}`;
+function recordarAnadidos(perfilId: string, alimentoId: string, r: Recuerdo[] | undefined) {
+  try { localStorage.setItem(claveRecuerdo(perfilId, alimentoId), JSON.stringify(r ?? [])); } catch { /* sin almacenamiento */ }
+}
+function recuerdoDe(perfilId: string | undefined, alimentoId: string): Recuerdo[] {
+  if (!perfilId) return [];
+  try { return JSON.parse(localStorage.getItem(claveRecuerdo(perfilId, alimentoId)) ?? '[]'); } catch { return []; }
+}
+
+interface Elegido { cantidad: number; texto: string; anadidos?: AnadidoBandeja[]; recordar?: Recuerdo[]; guardarComo?: string | null }
+// Un añadido en la ficha: en unidades de cocina (cucharaditas) o en porciones del alimento si es «otra cosa»
+interface AnadidoFicha { alimento: AlimentoDB; unidad: Unidad; unidades: number; casa?: boolean; generico?: boolean }
 
 // Solo las opciones propias de esa comida; las de Kalo quedan detrás de un botón para que las propias no se pierdan
 function ListaOpciones({ opciones, comida, porId, abrir }: { opciones: Opcion[] | null; comida: ComidaId; porId: Map<string, AlimentoDB>; abrir: (o: Opcion) => void }) {
@@ -265,7 +320,7 @@ function HojaOpcion({ o, porId, cerrar }: { o: Opcion; porId: Map<string, Alimen
                 <Text style={s.b15} numberOfLines={1}>{it.alimento.nombre}</Text>
                 <Text style={s.muted12} numberOfLines={1}>{it.texto}</Text>
               </View>
-              <Text style={s.kcal}>{fmt(nutrientes(it.alimento, it.cantidad).kcal)}</Text>
+              <Text style={s.kcal}>{fmt(kcalBandeja(it))}</Text>
             </View>
           ))}
         </ScrollView>
@@ -277,18 +332,57 @@ function HojaOpcion({ o, porId, cerrar }: { o: Opcion; porId: Map<string, Alimen
   );
 }
 
-function Ficha({ a, volver, onMedida }: { a: AlimentoDB; volver: () => void; onMedida: (m: { cantidad: number; texto: string } | null) => void }) {
+const porcionUnidad = (b: AlimentoDB): Unidad => ({ gramos: b.porcion_base.gramos, una: b.porcion_base.texto, varias: b.porcion_base.texto });
+
+function Ficha({ a, perfilId, volver, onMedida }: { a: AlimentoDB; perfilId?: string; volver: () => void; onMedida: (m: Elegido | null) => void }) {
   const [modo, setModo] = useState<'kalo' | 'g'>('kalo');
   const [mult, setMult] = useState(1);
   const [gramos, setGramos] = useState(String(Math.round(a.porcion_base.gramos)));
   const g = Number(gramos.replace(',', '.'));
   const gOk = Number.isFinite(g) && g > 0 && g <= 3000;
   const cantidad = modo === 'g' ? (gOk ? g / a.porcion_base.gramos : 0) : mult;
-  const n = nutrientes(a, cantidad);
+
+  // «Añadidos»: sugerencias de la casa (panela, aceite…) + lo que la persona sume; arranca con lo de la vez pasada
+  const mapa = mapaCache();
+  const sug = useMemo(() => sugerencias(a).filter(x => mapa.has(x.alimento_id)), [a.id]);
+  const [ads, setAds] = useState<AnadidoFicha[]>(() => recuerdoDe(perfilId, a.id).flatMap(r => {
+    const b = mapa.get(r.alimento_id);
+    if (!b) return [];
+    const sg = sug.find(x => x.alimento_id === r.alimento_id && !!x.casa === !!r.casa);
+    return [sg ? { alimento: b, unidad: sg.unidad, unidades: r.unidades, casa: sg.casa } : { alimento: b, unidad: porcionUnidad(b), unidades: r.unidades, generico: true }];
+  }));
+  const [picker, setPicker] = useState(false);
+  const [guardar, setGuardar] = useState(false);
+  const [nombreMio, setNombreMio] = useState(`Mi ${a.nombre.toLowerCase()}`);
+  const cantidadDe = (x: AnadidoFicha) => (x.casa ? ACEITE_CASA_G * cantidad * x.unidades : x.unidades * x.unidad.gramos) / x.alimento.porcion_base.gramos;
+  const textoDe = (x: AnadidoFicha) => x.casa ? 'como en la casa'
+    : x.generico ? (x.unidades === 1 ? x.unidad.una : `${fq(x.unidades)} × ${x.unidad.una}`)
+      : `${fq(x.unidades)} ${x.unidades === 1 ? x.unidad.una : x.unidad.varias}`;
+  const anadidos: AnadidoBandeja[] = ads.map(x => ({ alimento: x.alimento, cantidad: cantidadDe(x), texto: textoDe(x) }));
+  type Sug = (typeof sug)[number];
+  const sugOn = (x: Sug) => ads.some(y => y.alimento.id === x.alimento_id && !!y.casa === !!x.casa);
+  const tocarSug = (x: Sug) => setAds(v => sugOn(x)
+    ? v.filter(y => !(y.alimento.id === x.alimento_id && !!y.casa === !!x.casa))
+    : [...v, { alimento: mapa.get(x.alimento_id)!, unidad: x.unidad, unidades: x.inicial, casa: x.casa }]);
+
+  const base = nutrientes(a, cantidad);
+  const mapaFicha = mapa.has(a.id) ? mapa : new Map([[a.id, a], ...ads.map(x => [x.alimento.id, x.alimento] as [string, AlimentoDB])]);
+  const n = nutrientesItem({ alimento_id: a.id, cantidad, anadidos: anadidos.map(x => ({ alimento_id: x.alimento.id, cantidad: x.cantidad })) }, mapaFicha);
   const texto = modo === 'g'
     ? `${fmt(g)} g`
-    : `${mult === 1 ? '' : `${fq(mult)} × `}${a.porcion_base.texto} · ${fmt(n.g)} g`;
-  useEffect(() => { onMedida(cantidad > 0 ? { cantidad, texto } : null); }, [cantidad, texto]);
+    : `${mult === 1 ? '' : `${fq(mult)} × `}${a.porcion_base.texto} · ${fmt(base.g)} g`;
+  const firma = JSON.stringify(anadidos.map(x => [x.alimento.id, x.cantidad])) + guardar + nombreMio;
+  useEffect(() => {
+    onMedida(cantidad > 0 ? {
+      cantidad, texto, anadidos,
+      recordar: ads.map(x => ({ alimento_id: x.alimento.id, unidades: x.unidades, casa: x.casa })),
+      guardarComo: guardar && ads.length > 0 && nombreMio.trim() ? nombreMio.trim() : null,
+    } : null);
+  }, [cantidad, texto, firma]);
+  if (picker) {
+    return <AlimentoPicker titulo={`Añadir a ${a.nombre.toLowerCase()}`} onCerrar={() => setPicker(false)}
+      onElegir={b => { setAds(v => [...v, { alimento: b, unidad: porcionUnidad(b), unidades: 1, generico: true }]); setPicker(false); }} />;
+  }
   const pk = n.p * 4, ck = n.c * 4, fk = n.gr * 9, tk = pk + ck + fk || 1;
   const uri = fotoDe(a);
   const barras = (lista: [string, string, number][], color: string) => lista
@@ -319,7 +413,7 @@ function Ficha({ a, volver, onMedida }: { a: AlimentoDB; volver: () => void; onM
       <View style={[s.card, { gap: 16 }]}>
         <View style={{ minWidth: 0 }}>
           <Text style={s.hero50}>{fmt(n.kcal)}</Text>
-          <Text style={s.muted13}>{modo === 'g' ? `kcal en ${gOk ? fmt(g) : 0} g` : `kcal · ${fq(mult)} × ${a.porcion_base.texto} (${fmt(n.g)} g)`}</Text>
+          <Text style={s.muted13}>{modo === 'g' ? `kcal en ${gOk ? fmt(g) : 0} g` : `kcal · ${fq(mult)} × ${a.porcion_base.texto} (${fmt(base.g)} g)`}{ads.length > 0 ? ' + añadidos' : ''}</Text>
         </View>
         <View style={s.stack}>
           <View style={{ width: `${(pk / tk) * 100}%`, backgroundColor: C.accent }} />
@@ -341,7 +435,7 @@ function Ficha({ a, volver, onMedida }: { a: AlimentoDB; volver: () => void; onM
         <Segmento<'kalo' | 'g'> opciones={[['kalo', 'Medida de Kalo'], ['g', 'Mi medida']]} valor={modo} onCambio={setModo} />
         {modo === 'kalo' ? (
           <View style={s.rowEntre}>
-            <Text style={[s.b14, { flex: 1, fontWeight: '400' }]}>{fq(mult)} × {a.porcion_base.texto} · {fmt(n.g)} g</Text>
+            <Text style={[s.b14, { flex: 1, fontWeight: '400' }]}>{fq(mult)} × {a.porcion_base.texto} · {fmt(base.g)} g</Text>
             <View style={s.stepper}>
               <Pressable onPress={() => setMult(m => Math.max(0.5, m - 0.5))} style={s.stepBtn}><Text style={s.stepTxt}>−</Text></Pressable>
               <Text style={[s.b15, { minWidth: 34, textAlign: 'center' }]}>{fq(mult)}</Text>
@@ -357,6 +451,50 @@ function Ficha({ a, volver, onMedida }: { a: AlimentoDB; volver: () => void; onM
             </View>
             <Text style={s.muted12}>{gOk || gramos === '' ? 'Pon lo que comiste: el peso del empaque o lo que pesaste.' : 'Escribe un peso entre 1 y 3.000 g.'}</Text>
           </>
+        )}
+      </View>
+
+      <View style={[s.card, { gap: 10 }]}>
+        <Text style={s.b15}>Añadidos</Text>
+        {sug.length > 0 && (
+          <View style={s.sugs}>
+            {sug.map(x => {
+              const on = sugOn(x);
+              return (
+                <Pressable key={x.nombre} onPress={() => tocarSug(x)} style={[s.sugChip, on && s.sugOn]}>
+                  <Text style={[s.sugTxt, on && { color: C.onAccent }]}>{x.nombre}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+        {FRITOS.has(a.id) && <Text style={s.muted12}>Ya incluye el aceite en que se fríe.</Text>}
+        {ads.map((x, k) => (
+          <View key={k} style={[s.anRow, s.rowBorde]}>
+            <Miniatura a={x.alimento} size={34} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={[s.b14, { fontWeight: '700' }]} numberOfLines={1}>{x.casa ? 'Aceite' : x.alimento.nombre}</Text>
+              <Text style={s.muted12} numberOfLines={1}>{textoDe(x)}</Text>
+            </View>
+            {!x.casa && (
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                <Pressable onPress={() => setAds(v => v.map((y, j) => (j === k ? { ...y, unidades: Math.max(0.5, y.unidades - (y.generico ? 0.5 : 1)) } : y)))} style={s.miniBtn}><Text style={s.miniTxt}>−</Text></Pressable>
+                <Pressable onPress={() => setAds(v => v.map((y, j) => (j === k ? { ...y, unidades: y.unidades + (y.generico ? 0.5 : 1) } : y)))} style={s.miniBtn}><Text style={s.miniTxt}>+</Text></Pressable>
+              </View>
+            )}
+            <Text style={[s.kcal, { fontSize: 13 }]}>{fmt(nutrientes(x.alimento, cantidadDe(x)).kcal)}</Text>
+            <Pressable onPress={() => setAds(v => v.filter((_, j) => j !== k))} hitSlop={6} style={{ width: 20, alignItems: 'center' }}><Text style={s.quitarTxt}>×</Text></Pressable>
+          </View>
+        ))}
+        <Pressable onPress={() => setPicker(true)} style={{ minHeight: 36, justifyContent: 'center' }}><Text style={[s.link, { fontSize: 14 }]}>+ Añadir otra cosa</Text></Pressable>
+        {ads.length > 0 && (
+          <View style={{ gap: 8 }}>
+            <Pressable onPress={() => setGuardar(v => !v)} style={s.guardar}>
+              <View style={[s.caja, guardar && s.cajaOn]}>{guardar && <Text style={{ color: C.onAccent, fontWeight: '800', fontSize: 13 }}>✓</Text>}</View>
+              <Text style={s.b14}>Guardarlo como mío</Text>
+            </Pressable>
+            {guardar && <TextInput value={nombreMio} onChangeText={setNombreMio} style={[s.input, { borderWidth: 1, borderColor: C.accent }]} placeholder="Nombre, p. ej. Mi batido" placeholderTextColor={C.muted} />}
+          </View>
         )}
       </View>
 
@@ -416,5 +554,16 @@ const s = StyleSheet.create({
   quitar: { width: 28, height: 36, alignItems: 'center', justifyContent: 'center' },
   quitarTxt: { color: C.muted, fontSize: 22 },
   opc: { paddingVertical: 11, gap: 6 },
+  extra: { fontSize: 12, color: C.fat, fontWeight: '600' },
+  sugs: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  sugChip: { borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingVertical: 7, paddingHorizontal: 11 },
+  sugOn: { backgroundColor: C.accent, borderColor: C.accent },
+  sugTxt: { fontSize: 13, fontWeight: '600', color: C.text },
+  anRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+  miniBtn: { width: 32, height: 32, borderRadius: 9, backgroundColor: C.surface3, alignItems: 'center', justifyContent: 'center' },
+  miniTxt: { color: C.text, fontSize: 16, fontWeight: '600' },
+  guardar: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 36 },
+  caja: { width: 22, height: 22, borderRadius: 7, borderWidth: 1.5, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
+  cajaOn: { backgroundColor: C.accent, borderColor: C.accent },
   miniO: { borderRadius: 10, borderWidth: 2, borderColor: C.surface },
 });
