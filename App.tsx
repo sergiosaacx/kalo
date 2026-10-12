@@ -66,11 +66,20 @@ function Raiz() {
   const [recarga, setRecarga] = useState(0);
   // Editar algo ya anotado en Hoy
   const [editando, setEditando] = useState<ItemPlan | null>(null);
+  // La notificación «hoy toca pesarte» abre Perfil › Meta de peso
+  const [abrirMeta, setAbrirMeta] = useState(false);
+  const irAPesarse = (perfilId: string | null) => {
+    if (perfilId && perfiles.some(p => p.id === perfilId)) activar(perfilId);
+    setPregunta(null); setEditando(null); setAbrirMeta(true); setTab('perfil');
+  };
   useEffect(() => {
     if (!listo || Platform.OS !== 'web') return;
     const q = new URLSearchParams(window.location.search);
     const m = q.get('registrar');
-    if (esMomento(m)) {
+    if (q.get('pesarse')) {
+      irAPesarse(q.get('perfil'));
+      window.history.replaceState(null, '', window.location.pathname);
+    } else if (esMomento(m)) {
       setPregunta({ momento: m, fecha: q.get('fecha') ?? hoyISO(), perfilId: q.get('perfil') ?? undefined });
       window.history.replaceState(null, '', window.location.pathname);
     } else if (activo) {
@@ -80,6 +89,7 @@ function Raiz() {
       const d = e.data as { tipo?: string; url?: string };
       if (d?.tipo !== 'registrar' || !d.url) return;
       const u = new URL(d.url, window.location.href).searchParams;
+      if (u.get('pesarse')) return irAPesarse(u.get('perfil'));
       const mm = u.get('registrar');
       if (esMomento(mm)) { setRegistro(null); setPregunta({ momento: mm, fecha: u.get('fecha') ?? hoyISO(), perfilId: u.get('perfil') ?? undefined }); }
     };
@@ -108,7 +118,7 @@ function Raiz() {
     );
   }
 
-  const irA = (t: string) => { setDestino(null); setRegistro(null); setPregunta(null); setEditando(null); setTab(t); };
+  const irA = (t: string) => { setDestino(null); setRegistro(null); setPregunta(null); setEditando(null); setAbrirMeta(false); setTab(t); };
   const anotar = (abrirBandeja: boolean) => {
     if (!pregunta) return;
     setRegistro({ momento: pregunta.momento, fecha: pregunta.fecha, abrirBandeja });
@@ -139,7 +149,7 @@ function Raiz() {
         ) : tab === 'gasto' ? (
           <Gasto cambiarDia={() => setEditandoDia(true)} />
         ) : tab === 'perfil' ? (
-          <Perfil nuevoPerfil={() => setNuevo(true)} />
+          <Perfil nuevoPerfil={() => setNuevo(true)} abrir={abrirMeta ? 'meta' : null} />
         ) : (
           <View style={s.pronto}>
             <Text style={s.prontoTit}>{TABS.find(t => t[0] === tab)?.[1] ?? ''}</Text>

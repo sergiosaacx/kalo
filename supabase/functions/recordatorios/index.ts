@@ -34,7 +34,8 @@ Deno.serve(async req => {
 
   const { data: perfiles, error } = await db.from('perfiles').select('id, cuenta_id, nombre, comidas').eq('recordar', true);
   if (error) return new Response(error.message, { status: 500 });
-  if (!perfiles?.length) return Response.json({ enviados: 0 });
+  let enviados = await avisoPesarse(fecha, ahora, col.getUTCDay(), ahoraISO);
+  if (!perfiles?.length) return Response.json({ enviados });
 
   const ids = perfiles.map(p => p.id);
   const [{ data: estados }, { data: planes }] = await Promise.all([
@@ -45,7 +46,6 @@ Deno.serve(async req => {
   // Comidas que ya tienen algo marcado como comido hoy
   const comidas = new Set((planes ?? []).filter(p => (p.plan_items ?? []).some((i: { comido: boolean }) => i.comido)).map(p => `${p.perfil_id}|${p.comida}`));
 
-  let enviados = 0;
   for (const p of perfiles) {
     const horario: ComidaHora[] = Array.isArray(p.comidas) && p.comidas.length ? p.comidas : DEFECTO;
     for (const c of horario) {
@@ -85,3 +85,45 @@ Deno.serve(async req => {
   }
   return Response.json({ enviados });
 });
+
+// Manda una notificación a los celulares de un perfil (los suyos y los que no tienen dueño)
+async function mandar(perfil: { id: string; cuenta_id: string }, carga: object) {
+  const { data: todas } = await db.from('suscripciones_push').select('endpoint, p256dh, auth, perfil_id').eq('usuario_id', perfil.cuenta_id);
+  let n = 0;
+  for (const s of (todas ?? []).filter(x => !x.perfil_id || x.perfil_id === perfil.id)) {
+    try {
+      await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify(carga), { TTL: 3600 });
+      n++;
+    } catch (err) {
+      const code = (err as { statusCode?: number }).statusCode;
+      if (code === 404 || code === 410) await db.from('suscripciones_push').delete().eq('endpoint', s.endpoint);
+    }
+  }
+  return n;
+}
+
+// «Hoy toca pesarte»: el día y la hora que escogió en Meta de peso; no se manda si ese día ya se pesó
+async function avisoPesarse(fecha: string, ahora: number, diaSemana: number, ahoraISO: string) {
+  const { data: perfiles } = await db.from('perfiles').select('id, cuenta_id, nombre, pesarse').not('pesarse', 'is', null);
+  const toca = (perfiles ?? []).filter(p => p.pesarse?.on && p.pesarse.dia === diaSemana && p.pesarse.hora
+    && ahora >= minutos(p.pesarse.hora) && ahora - minutos(p.pesarse.hora) < VENTANA_MIN);
+  if (!toca.length) return 0;
+  const ids = toca.map(p => p.id);
+  const [{ data: ya }, { data: pesados }] = await Promise.all([
+    db.from('recordatorios').select('perfil_id').eq('fecha', fecha).eq('momento', 'peso').in('perfil_id', ids),
+    db.from('registros_peso').select('perfil_id').eq('fecha', fecha).in('perfil_id', ids),
+  ]);
+  const saltar = new Set([...(ya ?? []), ...(pesados ?? [])].map(x => x.perfil_id));
+  let n = 0;
+  for (const p of toca) {
+    if (saltar.has(p.id)) continue;
+    await db.from('recordatorios').upsert({ perfil_id: p.id, fecha, momento: 'peso', estado: 'enviado', actualizado: ahoraISO });
+    n += await mandar(p, {
+      titulo: 'Kalo',
+      cuerpo: `${p.nombre}, hoy toca pesarte. En ayunas, y lo anotas en Kalo.`,
+      url: `./?pesarse=1&perfil=${p.id}`,
+      tag: `kalo-${p.id}-peso`,
+    });
+  }
+  return n;
+}

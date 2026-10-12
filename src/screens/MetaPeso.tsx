@@ -8,6 +8,9 @@ import { useSesion, type PerfilActivo } from '../data/sesion';
 import { fmt, gasto, tieneCondicion, type Meta } from '../logic/energia';
 import { dias, fechaMeta, llego, proponerAjuste, ritmoPlan, sumarDias, type RegistroPeso } from '../logic/peso';
 import { C } from '../theme';
+import { createElement } from 'react';
+import { Platform } from 'react-native';
+import { HoraInput, Interruptor } from './MisComidas';
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
@@ -69,7 +72,8 @@ export function MetaPeso({ volver }: { volver: () => void }) {
   const en = gasto(p);
   const a = avance(p, lista);
   const ultimo = lista?.length ? lista[lista.length - 1] : null;
-  const propuesta = lista ? proponerAjuste(p, lista, en.objetivo) : null;
+  // Con gasto real aceptado, el ajuste por el ritmo ya no hace falta
+  const propuesta = lista && !p.gastoReal ? proponerAjuste(p, lista, en.objetivo) : null;
   const verPropuesta = propuesta && ultimo && visto !== ultimo.fecha;
   const llegaHoy = fechaMeta(p, hoy, a.actual);
 
@@ -103,8 +107,28 @@ export function MetaPeso({ volver }: { volver: () => void }) {
             <Pressable onPress={() => setPeso(v => Math.min(250, Math.round((v + 0.1) * 10) / 10))} style={s.btn}><Text style={s.btnTxt}>+</Text></Pressable>
           </View>
         </View>
+        <Text style={s.muted12}>En ayunas: en la mañana, después de ir al baño, antes de comer o tomar algo y con poca ropa. Siempre igual, para que se pueda comparar.</Text>
         {msg && <Text style={msg.ok ? { color: C.success, fontSize: 14 } : u.error}>{msg.txt}</Text>}
         <Boton texto={ultimo?.fecha === hoy ? 'Cambiar el peso de hoy' : 'Guardar peso'} onPress={onGuardar} cargando={guardando} />
+      </View>
+
+      {/* Recordatorio semanal de pesarse (la notificación abre esta pantalla) */}
+      <View style={[u.card, { gap: 10 }]}>
+        <View style={s.entre}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={s.b15}>Recordarme pesarme</Text>
+            <Text style={s.muted12}>Una vez por semana</Text>
+          </View>
+          <Interruptor on={!!p.pesarse?.on} cambiar={() => actualizarPerfil(p.id, { pesarse: { on: !p.pesarse?.on, dia: p.pesarse?.dia ?? 0, hora: p.pesarse?.hora ?? '07:00' } })} />
+        </View>
+        {p.pesarse?.on && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={[s.muted13, { flex: 1 }]}>Cada</Text>
+            <DiaInput valor={p.pesarse?.dia ?? 0} cambiar={dia => actualizarPerfil(p.id, { pesarse: { on: true, hora: p.pesarse?.hora ?? '07:00', dia } })} />
+            <Text style={s.muted13}>a las</Text>
+            <HoraInput valor={p.pesarse?.hora ?? '07:00'} apagado={false} cambiar={hora => actualizarPerfil(p.id, { pesarse: { on: true, dia: p.pesarse?.dia ?? 0, hora } })} />
+          </View>
+        )}
       </View>
 
       {/* Gráfica: tus pesos contra la línea del plan */}
@@ -243,7 +267,24 @@ function Grafica({ p, rs, hoy }: { p: PerfilActivo; rs: RegistroPeso[]; hoy: str
   );
 }
 
+const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+// Día de la semana con el selector nativo del celular
+function DiaInput({ valor, cambiar }: { valor: number; cambiar: (d: number) => void }) {
+  return (
+    <View style={s.diaCaja}>
+      <Text style={s.diaTxt}>{DIAS_SEMANA[valor]}</Text>
+      {Platform.OS === 'web' && createElement('select', {
+        value: String(valor), 'aria-label': 'Día',
+        onChange: (e: { target: { value: string } }) => cambiar(Number(e.target.value)),
+        style: { position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', border: 0, cursor: 'pointer' },
+      }, DIAS_SEMANA.map((d, k) => createElement('option', { key: d, value: String(k) }, d)))}
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
+  diaCaja: { position: 'relative', backgroundColor: C.surface3, borderRadius: 10, paddingVertical: 7, paddingHorizontal: 10 },
+  diaTxt: { fontSize: 15, fontWeight: '700', color: C.text },
   muted13: { fontSize: 13, color: C.muted },
   muted12: { fontSize: 12, color: C.muted },
   link: { fontSize: 15, fontWeight: '600', color: C.accent },

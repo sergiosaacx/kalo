@@ -6,7 +6,7 @@ import { activarNotificaciones, estadoNotif } from '../data/notificaciones';
 import { useSesion, type PerfilActivo } from '../data/sesion';
 import { C } from '../theme';
 
-function Interruptor({ on, cambiar }: { on: boolean; cambiar: () => void }) {
+export function Interruptor({ on, cambiar }: { on: boolean; cambiar: () => void }) {
   return (
     <Pressable onPress={cambiar} hitSlop={6} style={[s.sw, on && { backgroundColor: C.accent }]}>
       <View style={[s.swBola, on ? { left: 21, backgroundColor: C.onAccent } : null]} />
@@ -15,7 +15,7 @@ function Interruptor({ on, cambiar }: { on: boolean; cambiar: () => void }) {
 }
 
 // En el iPhone abre la rueda de horas nativa (la app es web instalada)
-function HoraInput({ valor, apagado, cambiar }: { valor: string; apagado: boolean; cambiar: (h: string) => void }) {
+export function HoraInput({ valor, apagado, cambiar }: { valor: string; apagado: boolean; cambiar: (h: string) => void }) {
   if (Platform.OS !== 'web') return <Text style={s.hora}>{horaTexto(valor)}</Text>;
   return (
     <View style={[s.horaCaja, apagado && s.horaApagada]}>

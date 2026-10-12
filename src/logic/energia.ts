@@ -47,6 +47,9 @@ export interface Perfil {
   salud?: Salud | null;  // «Tu salud»
   comidas?: { id: 'des' | 'media' | 'alm' | 'snack' | 'cena'; hora: string; on: boolean }[] | null; // «Mis comidas»
   recordar?: boolean;    // recordatorios «¿Ya desayunaste?»
+  gastoReal?: number | null;      // kcal/día medidas con lo que come y lo que pesa (si lo aceptó)
+  gastoRealFecha?: string | null;
+  pesarse?: { on: boolean; dia: number; hora: string } | null; // recordatorio semanal de pesarse (dia 0 = domingo)
 }
 
 const TRABAJO_KCAL: Record<Trabajo, number> = { sentado: 0, pie: 180, fisico: 380 };
@@ -82,9 +85,19 @@ export const PRESUPUESTO = { des: 0.25, alm: 0.35, cena: 0.3, snack: 0.1 } as co
 export const basalDe = (p: Pick<Perfil, 'peso' | 'estatura' | 'edad' | 'sexo'>) =>
   Math.round(10 * p.peso + 6.25 * p.estatura - 5 * p.edad + (p.sexo === 'M' ? 5 : -161));
 
+// Con gasto real aceptado, ese número reemplaza al de la fórmula (y al ajuste por el ritmo del peso)
 export function gasto(p: Perfil) {
+  const f = gastoFormula(p);
+  if (!p.gastoReal) return { ...f, real: false, formula: f.total };
+  const ajuste = ajusteMeta(p);
+  return { ...f, total: p.gastoReal, ajuste, objetivo: Math.max(1200, p.gastoReal + ajuste), real: true, formula: f.total };
+}
+
+const ajusteMeta = (p: Perfil) => (p.meta === 'bajar' ? -Math.round(p.ritmo * 1100) : p.meta === 'subir' ? Math.round(p.ritmo * 1100) : 0);
+
+export function gastoFormula(p: Perfil) {
   const basal = Math.round(basalDe(p) * (1 + pctSalud(p.salud) / 100));
-  const ajuste = (p.meta === 'bajar' ? -Math.round(p.ritmo * 1100) : p.meta === 'subir' ? Math.round(p.ritmo * 1100) : 0) + (p.ajusteKcal ?? 0);
+  const ajuste = ajusteMeta(p) + (p.ajusteKcal ?? 0);
   // Con «Tu día»: método factorial hora por hora (logic/actividad.ts)
   if (p.rutina) {
     const r = gastoPorRutina(basal, p.rutina);

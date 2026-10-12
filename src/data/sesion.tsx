@@ -13,6 +13,7 @@ interface PerfilDB {
   sueno_h: number; color: string; activo: boolean; fecha_nacimiento: string | null; rutina: Rutina | null;
   ajuste_kcal: number; ajuste_desde: string | null; salud: Salud | null;
   comidas: Perfil['comidas']; recordar: boolean;
+  gasto_real: number | null; gasto_real_fecha: string | null; pesarse: Perfil['pesarse'];
 }
 
 const desdeDB = (r: PerfilDB): Perfil & { activo: boolean } => ({
@@ -21,6 +22,7 @@ const desdeDB = (r: PerfilDB): Perfil & { activo: boolean } => ({
   pesoInicial: Number(r.peso_inicial_kg), meta: r.meta, pesoMeta: Number(r.peso_meta_kg), ritmo: Number(r.ritmo_kg_semana),
   trabajo: r.trabajo, pasos: r.pasos_dia, ejercicio: r.ejercicio_min, sueno: Number(r.sueno_h), color: r.color, activo: r.activo,
   ajusteKcal: r.ajuste_kcal ?? 0, ajusteDesde: r.ajuste_desde ?? undefined, salud: r.salud, comidas: r.comidas, recordar: r.recordar,
+  gastoReal: r.gasto_real, gastoRealFecha: r.gasto_real_fecha, pesarse: r.pesarse,
 });
 
 const haciaDB = (p: Partial<Perfil>) => {
@@ -46,6 +48,9 @@ const haciaDB = (p: Partial<Perfil>) => {
   if (p.salud !== undefined) m.salud = p.salud;
   if (p.comidas !== undefined) m.comidas = p.comidas;
   if (p.recordar !== undefined) m.recordar = p.recordar;
+  if (p.gastoReal !== undefined) m.gasto_real = p.gastoReal;
+  if (p.gastoRealFecha !== undefined) m.gasto_real_fecha = p.gastoRealFecha;
+  if (p.pesarse !== undefined) m.pesarse = p.pesarse;
   return m;
 };
 

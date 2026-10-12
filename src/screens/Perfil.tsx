@@ -10,9 +10,10 @@ import { edadDe, errorFecha, fechaValida, type Sexo } from '../logic/energia';
 import { C } from '../theme';
 
 // Perfiles de la familia + datos del perfil activo (handoff › Perfil)
-export function Perfil({ nuevoPerfil }: { nuevoPerfil: () => void }) {
+// abrir: entrar directo a una sección (la notificación de pesarse abre «Meta de peso»)
+export function Perfil({ nuevoPerfil, abrir }: { nuevoPerfil: () => void; abrir?: 'meta' | null }) {
   const { perfiles, activo, activar, actualizarPerfil, borrarPerfil, salir, sesion } = useSesion();
-  const [viendo, setViendo] = useState<'meta' | 'comidas' | null>(null);
+  const [viendo, setViendo] = useState<'meta' | 'comidas' | null>(abrir ?? null);
   if (!activo) return null;
   if (viendo === 'meta') return <MetaPeso key={activo.id} volver={() => setViendo(null)} />;
   if (viendo === 'comidas') return <MisComidas key={activo.id} volver={() => setViendo(null)} />;

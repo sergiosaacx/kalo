@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Anillo } from '../components/Anillo';
 import { nutrientesItem, useAlimentos, type AlimentoDB } from '../data/alimentos';
-import { COMIDAS, usePlanDia, type ComidaId, type ItemPlan } from '../data/plan';
+import { COMIDAS, hoyISO, usePlanDia, type ComidaId, type ItemPlan } from '../data/plan';
+import { Personalizado, Semana, lunesDe, rangoTxt } from './Resumen';
+import { sumarDias } from '../logic/peso';
 import { useSesion } from '../data/sesion';
 import { conSigno, fmt, gasto, macrosObjetivo } from '../logic/energia';
 import { C } from '../theme';
@@ -23,9 +25,13 @@ function sumar(items: ItemPlan[], porId: Map<string, AlimentoDB>, soloComido: bo
 
 export function Hoy({ irA, agregarA, verRestante, editar }: { irA: (tab: string) => void; agregarA: (c: ComidaId) => void; verRestante?: () => void; editar?: (it: ItemPlan) => void }) {
   const [rango, setRango] = useState<string>('hoy');
+  // El día que se ve (hoy, o uno anterior tocado en «Semana») y el rango de «Personalizado» para el encabezado
+  const [dia, setDia] = useState(hoyISO());
+  const [rangoP, setRangoP] = useState<[string, string] | null>(null);
+  const esHoy = dia === hoyISO();
   const { activo } = useSesion();
   const { lista } = useAlimentos();
-  const { items, alternar } = usePlanDia(activo?.id);
+  const { items, alternar } = usePlanDia(activo?.id, dia);
   if (!activo) return null;
   const pr = activo;
   const porId = new Map((lista ?? []).map(a => [a.id, a]));
@@ -35,8 +41,11 @@ export function Hoy({ irA, agregarA, verRestante, editar }: { irA: (tab: string)
   const hoy = sumar(todos, porId, true);
   const rem = tgt - hoy.k;
   const obj = macrosObjetivo(pr, tgt);
-  const d = new Date();
-  const fecha = `${DIAS[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]}`;
+  const [aa, mm, dd] = dia.split('-').map(Number);
+  const d = new Date(aa, mm - 1, dd);
+  const fecha = rango === 'semana' ? rangoTxt(lunesDe(hoyISO()), sumarDias(lunesDe(hoyISO()), 6))
+    : rango === 'custom' ? (rangoP ? rangoTxt(rangoP[0], rangoP[1]) : '')
+      : `${DIAS[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]}`;
 
   const msg = todos.length === 0
     ? `Hola, ${pr.nombre}. Hoy te tocan ${fmt(tgt)} kcal. Agrega lo que comas y marca el círculo cuando lo comas.`
@@ -77,10 +86,16 @@ export function Hoy({ irA, agregarA, verRestante, editar }: { irA: (tab: string)
         ))}
       </View>
 
-      {rango !== 'hoy' ? (
-        <View style={[s.card, { alignItems: 'center', paddingVertical: 40 }]}>
-          <Text style={s.soft}>La vista de {rango === 'semana' ? 'la semana' : 'rango personalizado'} llega en la próxima entrega.</Text>
-        </View>
+      {rango === 'hoy' && !esHoy && (
+        <Pressable onPress={() => setDia(hoyISO())} style={{ minHeight: 36, justifyContent: 'center', marginTop: -4 }}>
+          <Text style={[s.link, { fontSize: 14 }]}>‹ Volver a hoy</Text>
+        </Pressable>
+      )}
+
+      {rango === 'semana' ? (
+        <Semana onDia={f => { setDia(f); setRango('hoy'); }} />
+      ) : rango === 'custom' ? (
+        <Personalizado onRango={(a, b) => setRangoP([a, b])} />
       ) : (
         <>
           <View style={[s.card, { borderRadius: 24, paddingVertical: 22, alignItems: 'center', gap: 18 }]}>
@@ -100,7 +115,7 @@ export function Hoy({ irA, agregarA, verRestante, editar }: { irA: (tab: string)
                   </>
                 );
                 // «Restante» se puede tocar: abre «¿Qué como para completar?» (el cuadro se ve igual)
-                return i === 0 && verRestante
+                return i === 0 && verRestante && esHoy
                   ? <Pressable key={k.label} style={s.kpi} onPress={verRestante} accessibilityRole="button">{contenido}</Pressable>
                   : <View key={k.label} style={s.kpi}>{contenido}</View>;
               })}
@@ -146,7 +161,8 @@ export function Hoy({ irA, agregarA, verRestante, editar }: { irA: (tab: string)
                   <Text style={[s.b14, { fontSize: 16, fontWeight: '700' }]}>{label}</Text>
                   <Text style={s.muted13}>{fmt(sumar(delaComida, porId, true).k)} / {fmt(sumar(delaComida, porId, false).k)} kcal</Text>
                 </View>
-                {delaComida.length === 0 && items !== null && (
+                {delaComida.length === 0 && items !== null && !esHoy && <Text style={[s.muted13, { paddingVertical: 8 }]}>Sin alimentos</Text>}
+                {delaComida.length === 0 && items !== null && esHoy && (
                   <Pressable onPress={() => agregarA(m)} style={s.vacio}>
                     <Text style={[s.muted13, { fontSize: 14 }]}>Sin alimentos · Agregar</Text>
                   </Pressable>
@@ -179,7 +195,7 @@ export function Hoy({ irA, agregarA, verRestante, editar }: { irA: (tab: string)
                     </View>
                   );
                 })}
-                {delaComida.length > 0 && (
+                {delaComida.length > 0 && esHoy && (
                   <Pressable onPress={() => agregarA(m)} style={{ minHeight: 40, justifyContent: 'center', borderTopWidth: 1, borderTopColor: C.divider }}>
                     <Text style={[s.link, { fontSize: 14 }]}>+ Agregar alimento</Text>
                   </Pressable>
