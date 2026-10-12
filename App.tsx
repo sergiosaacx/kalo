@@ -5,13 +5,13 @@ import { StatusBar } from 'expo-status-bar';
 import { LetreroNotificaciones } from './src/components/Notificaciones';
 import { estadoNotif, sincronizarNotificaciones, yaPreguntado } from './src/data/notificaciones';
 import { MOMENTOS, esMomento, pendienteDeHoy, type Momento } from './src/data/comidas';
-import { comidaDeAhora, hoyISO, type ComidaId } from './src/data/plan';
+import { comidaDeAhora, hoyISO, type ComidaId, type ItemPlan } from './src/data/plan';
 import { IconoGasto, IconoHoy, IconoMas, IconoMenu, IconoPerfil } from './src/components/Iconos';
 import { Pregunta } from './src/screens/Pregunta';
 import { QueComer } from './src/screens/QueComer';
 import { medirPantalla } from './src/data/diagnostico';
 import { SesionProvider, useSesion } from './src/data/sesion';
-import { Alimentos } from './src/screens/Alimentos';
+import { Alimentos, EditarItem } from './src/screens/Alimentos';
 import { Entrar } from './src/screens/Entrar';
 import { Gasto } from './src/screens/Gasto';
 import { Menu } from './src/screens/Menu';
@@ -64,6 +64,8 @@ function Raiz() {
   const [queComer, setQueComer] = useState(false);
   const [agregoAlgo, setAgregoAlgo] = useState(false);
   const [recarga, setRecarga] = useState(0);
+  // Editar algo ya anotado en Hoy
+  const [editando, setEditando] = useState<ItemPlan | null>(null);
   useEffect(() => {
     if (!listo || Platform.OS !== 'web') return;
     const q = new URLSearchParams(window.location.search);
@@ -106,7 +108,7 @@ function Raiz() {
     );
   }
 
-  const irA = (t: string) => { setDestino(null); setRegistro(null); setPregunta(null); setTab(t); };
+  const irA = (t: string) => { setDestino(null); setRegistro(null); setPregunta(null); setEditando(null); setTab(t); };
   const anotar = (abrirBandeja: boolean) => {
     if (!pregunta) return;
     setRegistro({ momento: pregunta.momento, fecha: pregunta.fecha, abrirBandeja });
@@ -117,7 +119,9 @@ function Raiz() {
   return (
     <>
       {/* Alimentos lleva su propio scroll para dejar la bandeja fija abajo */}
-      {pregunta ? (
+      {editando ? (
+        <EditarItem key={editando.id} it={editando} cerrar={cambio => { setEditando(null); if (cambio) setRecarga(n => n + 1); }} />
+      ) : pregunta ? (
         <ScrollView key="pregunta" style={{ flex: 1 }} contentContainerStyle={s.scroll}>
           <Pregunta momento={pregunta.momento} fecha={pregunta.fecha} libre={pregunta.libre} onMomento={m => setPregunta(x => x && { ...x, momento: m })}
             onOpcion={() => anotar(true)} onOtra={() => anotar(false)} onCerrar={() => setPregunta(null)} />
@@ -129,7 +133,7 @@ function Raiz() {
       <ScrollView key={tab + (destino ?? '') + recarga} style={{ flex: 1 }} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
         {aviso && tab === 'hoy' && <Text style={s.aviso}>{aviso}</Text>}
         {tab === 'hoy' ? (
-          <Hoy irA={irA} agregarA={c => { setDestino(c); setTab('alimentos'); }} verRestante={() => { setAgregoAlgo(false); setQueComer(true); }} />
+          <Hoy irA={irA} agregarA={c => { setDestino(c); setTab('alimentos'); }} verRestante={() => { setAgregoAlgo(false); setQueComer(true); }} editar={setEditando} />
         ) : tab === 'menu' ? (
           <Menu />
         ) : tab === 'gasto' ? (

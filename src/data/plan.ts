@@ -90,3 +90,13 @@ export async function frecuenciaComidas(perfilId: string, dias = 30) {
     for (const i of p.plan_items) if (i.comido) m.set(`${p.comida}|${i.alimento_id}`, (m.get(`${p.comida}|${i.alimento_id}`) ?? 0) + 1);
   return m;
 }
+
+// Editar lo que ya está anotado: otro alimento, otra cantidad u otros añadidos (sin borrar y crear de nuevo)
+export async function editarItem(id: string, cambios: { alimento_id: string; cantidad: number; anadidos: Anadido[] | null }) {
+  const { error } = await supabase.from('plan_items').update(cambios).eq('id', id);
+  return error ? 'No pudimos guardar el cambio. Revisa tu conexión e inténtalo de nuevo.' : null;
+}
+export async function quitarItem(id: string) {
+  const { error } = await supabase.from('plan_items').delete().eq('id', id);
+  return error ? 'No pudimos quitarlo. Inténtalo de nuevo.' : null;
+}

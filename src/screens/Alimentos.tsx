@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Boton, Chips, Segmento, u } from '../components/ui';
-import { CATEGORIAS, MINERALES, VITAMINAS, fotoDe, mapaCache, nutrientes, nutrientesItem, sinTildes, useAlimentos, type AlimentoDB } from '../data/alimentos';
+import { CATEGORIAS, MINERALES, VITAMINAS, fotoDe, mapaCache, nutrientes, nutrientesItem, sinTildes, useAlimentos, type AlimentoDB, type Anadido } from '../data/alimentos';
 import { anadidosParaGuardar, bandeja, kcalBandeja, useBandeja, type AnadidoBandeja, type ItemBandeja } from '../data/bandeja';
 import { guardarOpcion, tiempoTexto, useOpciones, type Opcion } from '../data/opciones';
 import { AlimentoPicker } from '../components/AlimentoPicker';
 import { ACEITE_CASA_G, FRITOS, sugerencias, type Unidad } from '../logic/anadidos';
 import { MOMENTOS, responder, type Momento } from '../data/comidas';
-import { COMIDAS, agregarVariosAlPlan, comidaDeAhora, hoyISO, nombreComida, type ComidaId } from '../data/plan';
+import { COMIDAS, agregarVariosAlPlan, comidaDeAhora, editarItem, hoyISO, nombreComida, quitarItem, type ComidaId, type ItemPlan } from '../data/plan';
 import { useSesion } from '../data/sesion';
 import { fmt } from '../logic/energia';
 import { C } from '../theme';
@@ -241,6 +241,77 @@ export const itemsDe = (o: Opcion, porId: Map<string, AlimentoDB>): ItemBandeja[
   });
 export const kcalDe = (its: ItemBandeja[]) => its.reduce((t, it) => t + kcalBandeja(it), 0);
 
+// Editar desde Hoy algo ya anotado: cambiar medida y añadidos, cambiarlo por otro alimento o quitarlo
+export function EditarItem({ it, cerrar }: { it: ItemPlan; cerrar: (cambio: boolean) => void }) {
+  const { activo } = useSesion();
+  const { lista } = useAlimentos();
+  const [a, setA] = useState<AlimentoDB | null>(null);
+  const [inicial, setInicial] = useState<{ cantidad: number; anadidos?: Anadido[] | null }>({ cantidad: it.cantidad, anadidos: it.anadidos });
+  const [elegido, setElegido] = useState<Elegido | null>(null);
+  const [picker, setPicker] = useState(false);
+  const [ocupado, setOcupado] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => { if (lista && !a) setA(lista.find(x => x.id === it.alimento_id) ?? null); }, [lista]);
+  if (!a) return <ActivityIndicator color={C.accent} style={{ marginTop: 40 }} />;
+  const comida = nombreComida(it.comida).toLowerCase();
+
+  const guardar = async () => {
+    if (!elegido) return;
+    setOcupado(true);
+    const e = await editarItem(it.id, { alimento_id: a.id, cantidad: elegido.cantidad, anadidos: anadidosParaGuardar({ alimento: a, cantidad: elegido.cantidad, texto: '', anadidos: elegido.anadidos }) });
+    setOcupado(false);
+    if (e) return setError(e);
+    if (activo) recordarAnadidos(activo.id, a.id, elegido.recordar);
+    cerrar(true);
+  };
+  const quitar = async () => {
+    setOcupado(true);
+    const e = await quitarItem(it.id);
+    setOcupado(false);
+    if (e) return setError(e);
+    cerrar(true);
+  };
+
+  return (
+    <View style={{ flex: 1 }}>
+      <ScrollView key={a.id} style={{ flex: 1 }} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+        {picker ? (
+          <AlimentoPicker titulo={`Cambiar ${a.nombre.toLowerCase()} por…`} onCerrar={() => setPicker(false)} onElegir={b => {
+            // Mismo tamaño de porción (p. ej. arepa blanca → amarilla): se queda la cantidad; si no, 1 porción. Los añadidos se quedan.
+            const nueva = b.porcion_base.gramos === a.porcion_base.gramos ? (elegido?.cantidad ?? it.cantidad) : 1;
+            // «Aceite como en la casa» va por porción: se recalcula con la nueva cantidad
+            const anadidos = elegido?.anadidos?.map((x, k) => ({
+              alimento_id: x.alimento.id,
+              cantidad: elegido.recordar?.[k]?.casa ? (ACEITE_CASA_G * nueva * (elegido.recordar[k].unidades || 1)) / x.alimento.porcion_base.gramos : x.cantidad,
+            })) ?? inicial.anadidos;
+            setInicial({ cantidad: nueva, anadidos });
+            setA(b);
+            setPicker(false);
+          }} />
+        ) : (
+          <Ficha key={a.id} a={a} perfilId={activo?.id} volverTxt="‹ Hoy" volver={() => cerrar(false)} onMedida={setElegido} inicial={inicial}
+            extra={(
+              <Pressable onPress={() => setPicker(true)} style={s.cambiar}>
+                <Text style={[s.link, { fontSize: 14 }]}>Cambiar por otro alimento</Text>
+              </Pressable>
+            )} />
+        )}
+      </ScrollView>
+      {!picker && (
+        <View style={s.bandeja}>
+          <View style={s.bandejaIn}>
+            <Pressable onPress={quitar} disabled={ocupado} style={s.btnQuitar}><Text style={s.btnQuitarTxt}>Quitar del {comida}</Text></Pressable>
+            <Pressable onPress={guardar} disabled={ocupado || !elegido} style={[s.listo, { flex: 1 }, !elegido && { opacity: 0.4 }]}>
+              {ocupado ? <ActivityIndicator color={C.onAccent} /> : <Text style={s.listoTxt}>Guardar cambios</Text>}
+            </Pressable>
+          </View>
+          {error && <Text style={[u.error, s.bandejaError]}>{error}</Text>}
+        </View>
+      )}
+    </View>
+  );
+}
+
 // Lo que se recuerda por persona y alimento: «la abuela toma el café con 2 cucharaditas de panela»
 interface Recuerdo { alimento_id: string; unidades: number; casa?: boolean }
 const claveRecuerdo = (perfilId: string, alimentoId: string) => `kalo_anadidos_${perfilId}_${alimentoId}`;
@@ -332,12 +403,32 @@ function HojaOpcion({ o, porId, cerrar }: { o: Opcion; porId: Map<string, Alimen
   );
 }
 
+function desdeGuardado(guardados: Anadido[], sug: ReturnType<typeof sugerencias>, cantidad: number, _g: number): AnadidoFicha[] {
+  const mapa = mapaCache();
+  return guardados.flatMap(x => {
+    const b = mapa.get(x.alimento_id);
+    if (!b) return [];
+    const gramos = x.cantidad * b.porcion_base.gramos;
+    const casa = sug.find(s => s.alimento_id === x.alimento_id && s.casa);
+    if (casa && cantidad > 0 && Math.abs(gramos / (ACEITE_CASA_G * cantidad) - Math.round(gramos / (ACEITE_CASA_G * cantidad))) < 0.01)
+      return [{ alimento: b, unidad: casa.unidad, unidades: Math.max(1, Math.round(gramos / (ACEITE_CASA_G * cantidad))), casa: true }];
+    const sg = sug.find(s => s.alimento_id === x.alimento_id && !s.casa);
+    if (sg) return [{ alimento: b, unidad: sg.unidad, unidades: Math.round((gramos / sg.unidad.gramos) * 2) / 2 }];
+    return [{ alimento: b, unidad: porcionUnidad(b), unidades: x.cantidad, generico: true }];
+  });
+}
+
 const porcionUnidad = (b: AlimentoDB): Unidad => ({ gramos: b.porcion_base.gramos, una: b.porcion_base.texto, varias: b.porcion_base.texto });
 
-function Ficha({ a, perfilId, volver, onMedida }: { a: AlimentoDB; perfilId?: string; volver: () => void; onMedida: (m: Elegido | null) => void }) {
-  const [modo, setModo] = useState<'kalo' | 'g'>('kalo');
-  const [mult, setMult] = useState(1);
-  const [gramos, setGramos] = useState(String(Math.round(a.porcion_base.gramos)));
+// inicial: lo que ya estaba anotado (al editar desde Hoy). Si la cantidad no cae en pasos de ½, abre en «Mi medida» con sus gramos.
+function Ficha({ a, perfilId, volver, onMedida, inicial, volverTxt = '‹ Alimentos', extra }: {
+  a: AlimentoDB; perfilId?: string; volver: () => void; onMedida: (m: Elegido | null) => void;
+  inicial?: { cantidad: number; anadidos?: Anadido[] | null }; volverTxt?: string; extra?: ReactNode;
+}) {
+  const enPasos = !inicial || Math.abs(inicial.cantidad * 2 - Math.round(inicial.cantidad * 2)) < 1e-6;
+  const [modo, setModo] = useState<'kalo' | 'g'>(enPasos ? 'kalo' : 'g');
+  const [mult, setMult] = useState(inicial && enPasos ? Math.max(0.5, inicial.cantidad) : 1);
+  const [gramos, setGramos] = useState(String(Math.round(a.porcion_base.gramos * (inicial && !enPasos ? inicial.cantidad : 1))));
   const g = Number(gramos.replace(',', '.'));
   const gOk = Number.isFinite(g) && g > 0 && g <= 3000;
   const cantidad = modo === 'g' ? (gOk ? g / a.porcion_base.gramos : 0) : mult;
@@ -345,7 +436,7 @@ function Ficha({ a, perfilId, volver, onMedida }: { a: AlimentoDB; perfilId?: st
   // «Añadidos»: sugerencias de la casa (panela, aceite…) + lo que la persona sume; arranca con lo de la vez pasada
   const mapa = mapaCache();
   const sug = useMemo(() => sugerencias(a).filter(x => mapa.has(x.alimento_id)), [a.id]);
-  const [ads, setAds] = useState<AnadidoFicha[]>(() => recuerdoDe(perfilId, a.id).flatMap(r => {
+  const [ads, setAds] = useState<AnadidoFicha[]>(() => inicial ? desdeGuardado(inicial.anadidos ?? [], sug, inicial.cantidad, a.porcion_base.gramos) : recuerdoDe(perfilId, a.id).flatMap(r => {
     const b = mapa.get(r.alimento_id);
     if (!b) return [];
     const sg = sug.find(x => x.alimento_id === r.alimento_id && !!x.casa === !!r.casa);
@@ -401,7 +492,7 @@ function Ficha({ a, perfilId, volver, onMedida }: { a: AlimentoDB; perfilId?: st
   return (
     <View style={{ gap: 14 }}>
       <Pressable onPress={volver} style={{ minHeight: 44, justifyContent: 'center' }}>
-        <Text style={s.link}>‹ Alimentos</Text>
+        <Text style={s.link}>{volverTxt}</Text>
       </Pressable>
       {uri ? <Image source={{ uri }} style={s.hero} /> : <View style={s.hero} />}
       <View style={{ gap: 2 }}>
@@ -409,6 +500,7 @@ function Ficha({ a, perfilId, volver, onMedida }: { a: AlimentoDB; perfilId?: st
         <Text style={s.h1}>{a.nombre}</Text>
         {a.sinonimos.length > 0 && <Text style={s.muted13}>También: {a.sinonimos.join(', ')}</Text>}
       </View>
+      {extra}
 
       <View style={[s.card, { gap: 16 }]}>
         <View style={{ minWidth: 0 }}>
@@ -554,6 +646,9 @@ const s = StyleSheet.create({
   quitar: { width: 28, height: 36, alignItems: 'center', justifyContent: 'center' },
   quitarTxt: { color: C.muted, fontSize: 22 },
   opc: { paddingVertical: 11, gap: 6 },
+  cambiar: { alignSelf: 'flex-start', minHeight: 36, justifyContent: 'center', borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingHorizontal: 12 },
+  btnQuitar: { height: 44, borderRadius: 14, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14 },
+  btnQuitarTxt: { color: C.text, fontSize: 14, fontWeight: '700' },
   extra: { fontSize: 12, color: C.fat, fontWeight: '600' },
   sugs: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   sugChip: { borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingVertical: 7, paddingHorizontal: 11 },

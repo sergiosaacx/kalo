@@ -21,7 +21,7 @@ function sumar(items: ItemPlan[], porId: Map<string, AlimentoDB>, soloComido: bo
   }, { k: 0, p: 0, c: 0, g: 0 });
 }
 
-export function Hoy({ irA, agregarA, verRestante }: { irA: (tab: string) => void; agregarA: (c: ComidaId) => void; verRestante?: () => void }) {
+export function Hoy({ irA, agregarA, verRestante, editar }: { irA: (tab: string) => void; agregarA: (c: ComidaId) => void; verRestante?: () => void; editar?: (it: ItemPlan) => void }) {
   const [rango, setRango] = useState<string>('hoy');
   const { activo } = useSesion();
   const { lista } = useAlimentos();
@@ -164,6 +164,8 @@ export function Hoy({ irA, agregarA, verRestante }: { irA: (tab: string) => void
                         style={[s.check, { borderColor: it.comido ? C.accent : '#4A4A4E', backgroundColor: it.comido ? C.accent : 'transparent' }]}>
                         <Text style={s.checkTxt}>{it.comido ? '✓' : ''}</Text>
                       </Pressable>
+                      {/* Tocar el alimento lo abre para editarlo (medida, añadidos, cambiarlo o quitarlo) */}
+                      <Pressable onPress={() => editar?.(it)} style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                       {f.foto_url ? <Image source={{ uri: f.foto_url }} style={s.thumb} /> : <View style={s.thumb} />}
                       <View style={{ flex: 1, minWidth: 0, gap: 2, opacity: op }}>
                         <Text style={[s.b14, { fontSize: 15 }]} numberOfLines={1}>{f.nombre}</Text>
@@ -173,6 +175,7 @@ export function Hoy({ irA, agregarA, verRestante }: { irA: (tab: string) => void
                         {ad.length > 0 && <Text style={[s.muted13, { fontSize: 12, color: C.fat }]} numberOfLines={1}>+ {ad.join(', ')}</Text>}
                       </View>
                       <Text style={[s.b14, { opacity: op }]}>{fmt(n.kcal)}</Text>
+                      </Pressable>
                     </View>
                   );
                 })}
