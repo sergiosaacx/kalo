@@ -65,11 +65,21 @@
         if (!instalada || !ios) return;
         var raiz = document.documentElement;
         raiz.classList.add('instalada');
+        // ¿La app va detrás de la franja de la hora? (margen seguro de arriba > 0). En iOS 26.1 (iPhone 13 Pro Max)
+        // la app empieza debajo de la hora, el margen de arriba es 0 y la ventana ya es el alto real: no se estira.
+        function margenArriba() {
+          var sonda = document.createElement('div');
+          sonda.style.cssText = 'position:fixed;top:0;left:0;width:0;visibility:hidden;padding-top:env(safe-area-inset-top)';
+          raiz.appendChild(sonda);
+          var m = parseFloat(getComputedStyle(sonda).paddingTop) || 0;
+          raiz.removeChild(sonda);
+          return m;
+        }
         function ajustar() {
           var alto = window.innerHeight;
           var vertical = window.innerHeight >= window.innerWidth;
           var pantalla = vertical ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
-          if (pantalla > alto + 1) alto = pantalla;
+          if (pantalla > alto + 1 && margenArriba() > 0) alto = pantalla;
           raiz.style.setProperty('--alto', alto + 'px');
         }
         ajustar();
