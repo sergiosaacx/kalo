@@ -23,7 +23,8 @@ function sumar(items: ItemPlan[], porId: Map<string, AlimentoDB>, soloComido: bo
   }, { k: 0, p: 0, c: 0, g: 0 });
 }
 
-export function Hoy({ irA, agregarA, verRestante, editar }: { irA: (tab: string) => void; agregarA: (c: ComidaId) => void; verRestante?: () => void; editar?: (it: ItemPlan) => void }) {
+// aviso: «Desayuno anotado · 766 kcal» al volver de responder «¿Ya desayunaste?»; aquí se le suma lo que queda del día
+export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: string) => void; agregarA: (c: ComidaId) => void; verRestante?: () => void; editar?: (it: ItemPlan) => void; aviso?: string | null }) {
   const [rango, setRango] = useState<string>('hoy');
   // El día que se ve (hoy, o uno anterior tocado en «Semana») y el rango de «Personalizado» para el encabezado
   const [dia, setDia] = useState(hoyISO());
@@ -68,6 +69,9 @@ export function Hoy({ irA, agregarA, verRestante, editar }: { irA: (tab: string)
 
   return (
     <View style={{ gap: 14 }}>
+      {aviso && esHoy && items !== null && (
+        <Text style={s.aviso}>{aviso} · {rem > 0 ? `te quedan ${fmt(rem)} para hoy` : 'ya cubriste tu meta de hoy'}</Text>
+      )}
       <View style={s.header}>
         <View style={{ gap: 2 }}>
           <Text style={s.muted13}>{fecha}</Text>
@@ -210,6 +214,7 @@ export function Hoy({ irA, agregarA, verRestante, editar }: { irA: (tab: string)
 }
 
 const s = StyleSheet.create({
+  aviso: { backgroundColor: '#141A0E', borderWidth: 1, borderColor: C.success, color: C.success, borderRadius: 16, paddingVertical: 12, paddingHorizontal: 14, fontSize: 15, fontWeight: '700', overflow: 'hidden' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4 },
   h1: { fontSize: 28, fontWeight: '700', letterSpacing: -0.56, color: C.text },
   h22: { fontSize: 22, fontWeight: '700', color: C.text },

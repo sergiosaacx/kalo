@@ -141,9 +141,8 @@ function Raiz() {
           onAgregado={a => { irA('hoy'); if (a) setAviso(a); }} />
       ) : (
       <ScrollView key={tab + (destino ?? '') + recarga} style={{ flex: 1 }} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
-        {aviso && tab === 'hoy' && <Text style={s.aviso}>{aviso}</Text>}
         {tab === 'hoy' ? (
-          <Hoy irA={irA} agregarA={c => { setDestino(c); setTab('alimentos'); }} verRestante={() => { setAgregoAlgo(false); setQueComer(true); }} editar={setEditando} />
+          <Hoy irA={irA} agregarA={c => { setDestino(c); setTab('alimentos'); }} verRestante={() => { setAgregoAlgo(false); setQueComer(true); }} editar={setEditando} aviso={aviso} />
         ) : tab === 'menu' ? (
           <Menu />
         ) : tab === 'gasto' ? (
