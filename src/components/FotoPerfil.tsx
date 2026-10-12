@@ -5,8 +5,10 @@ import { supabase } from '../lib/supabase';
 import { useSesion, type PerfilActivo } from '../data/sesion';
 import { C } from '../theme';
 
-// Avatares de Kalo (para quien no quiere subir foto). Se llenan cuando Sergio apruebe el juego de avatares.
-export const AVATARES: { id: string; url: string }[] = [];
+// Avatares de Kalo (para quien no quiere subir foto): objetos de fuerza, salud y disciplina en 3D (aprobados 12-oct)
+const BASE = 'https://sergiosaacx.github.io/kalo/avatares/';
+export const AVATARES: { id: string; url: string }[] = ['pesa', 'corazon', 'mancuerna', 'rayo', 'reloj', 'diana', 'medalla', 'gota', 'latido', 'escudo', 'brujula', 'infinito']
+  .map(id => ({ id, url: `${BASE}${id}.jpg` }));
 
 // Reduce la foto a 256 × 256 (recorte cuadrado al centro) antes de subirla
 async function achicar(archivo: File): Promise<Blob> {
