@@ -6,6 +6,7 @@ import { useAlimentos } from '../data/alimentos';
 import { porDia, usePlanRango, type Dia } from '../data/historial';
 import { hoyISO } from '../data/plan';
 import { usePesos } from '../data/peso';
+import { aguaPorDia, litros, metaAgua } from '../data/agua';
 import { useSesion } from '../data/sesion';
 import { fmt, gasto, conSigno } from '../logic/energia';
 import { sumarDias } from '../logic/peso';
@@ -23,6 +24,32 @@ export const rangoTxt = (desde: string, hasta: string) => {
 // Lunes de la semana de una fecha
 export const lunesDe = (f: string) => sumarDias(f, -((dDe(f).getDay() + 6) % 7));
 const enMeta = (k: number, meta: number) => Math.abs(k - meta) <= meta * 0.1;
+
+// Promedio de agua de los días cerrados que tienen agua anotada
+function useAguaPromedio(perfilId: string | undefined, desde: string, hasta: string) {
+  const [prom, setProm] = useState<{ ml: number; dias: number } | null>(null);
+  useEffect(() => {
+    if (!perfilId) return;
+    const hoy = hoyISO();
+    aguaPorDia(perfilId, desde, hasta).then(m => {
+      const v = [...m.entries()].filter(([f, ml]) => f < hoy && ml > 0).map(([, ml]) => ml);
+      setProm({ ml: v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0, dias: v.length });
+    });
+  }, [perfilId, desde, hasta]);
+  return prom;
+}
+
+function LineaAgua({ prom, meta }: { prom: { ml: number; dias: number } | null; meta: number }) {
+  if (!prom) return null;
+  return (
+    <View style={[u.card, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 }]}>
+      <Text style={s.muted13}>Agua promedio</Text>
+      <Text style={{ fontSize: 15, fontWeight: '700', color: prom.dias ? C.carbs : C.muted }}>
+        {prom.dias ? `${litros(prom.ml)} de ${litros(meta)} L al día` : 'sin días anotados'}
+      </Text>
+    </View>
+  );
+}
 
 // Promedios de los días ya cerrados (hoy va en curso y no cuenta) que tienen algo comido
 function resumen(m: Map<string, Dia>, hoy: string, meta: number) {
@@ -55,6 +82,7 @@ export function Semana({ onDia }: { onDia: (fecha: string) => void }) {
   const { lista } = useAlimentos();
   const hoy = hoyISO(), lunes = lunesDe(hoy), domingo = sumarDias(lunes, 6);
   const { items } = usePlanRango(activo?.id, lunes, domingo);
+  const agua = useAguaPromedio(activo?.id, lunes, domingo);
   const porId = useMemo(() => new Map((lista ?? []).map(a => [a.id, a])), [lista]);
   if (!activo) return null;
   if (!items || !lista) return <ActivityIndicator color={C.accent} style={{ marginTop: 30 }} />;
@@ -105,6 +133,7 @@ export function Semana({ onDia }: { onDia: (fecha: string) => void }) {
         { label: 'En tu meta', valor: r.n ? `${r.enMeta} de ${r.n}` : '—', sub: '±10 %' },
         { label: 'Proteína', valor: r.n ? `${fmt(r.proteina)} g` : '—', sub: 'promedio' },
       ]} />
+      <LineaAgua prom={agua} meta={metaAgua(activo)} />
       <View style={[u.card, { paddingVertical: 6 }]}>
         {filas.map((f, k) => {
           const fila = (
@@ -148,6 +177,7 @@ export function Personalizado({ onRango }: { onRango?: (desde: string, hasta: st
   const desde = rango === '14' ? sumarDias(hoy, -13) : rango === '30' ? sumarDias(hoy, -29) : rango === 'mes' ? `${hoy.slice(0, 8)}01` : libre.desde;
   const hasta = rango === 'fechas' ? libre.hasta : hoy;
   const { items } = usePlanRango(activo?.id, desde, hasta);
+  const agua = useAguaPromedio(activo?.id, desde, hasta);
   const { lista: pesos } = usePesos(activo?.id);
   const porId = useMemo(() => new Map((lista ?? []).map(a => [a.id, a])), [lista]);
   useEffect(() => { onRango?.(desde, hasta); }, [desde, hasta]);
@@ -177,6 +207,7 @@ export function Personalizado({ onRango }: { onRango?: (desde: string, hasta: st
           { label: 'Proteína', valor: `${fmt(r.proteina)} g` },
           { label: 'Peso', valor: cambio === null ? '—' : `${cambio > 0 ? '+' : cambio < 0 ? '−' : ''}${Math.abs(Math.round(cambio * 10) / 10).toLocaleString('es-CO')} kg` },
         ]} />
+        <LineaAgua prom={agua} meta={metaAgua(activo)} />
         {top.length > 0 && (
           <View style={[u.card, { gap: 6 }]}>
             <Text style={s.muted13}>Lo que más comiste</Text>

@@ -35,6 +35,7 @@ Deno.serve(async req => {
   const { data: perfiles, error } = await db.from('perfiles').select('id, cuenta_id, nombre, comidas').eq('recordar', true);
   if (error) return new Response(error.message, { status: 500 });
   let enviados = await avisoPesarse(fecha, ahora, col.getUTCDay(), ahoraISO);
+  enviados += await avisoAgua(fecha, ahora, ahoraISO);
   if (!perfiles?.length) return Response.json({ enviados });
 
   const ids = perfiles.map(p => p.id);
@@ -98,6 +99,40 @@ async function mandar(perfil: { id: string; cuenta_id: string }, carga: object) 
       const code = (err as { statusCode?: number }).statusCode;
       if (code === 404 || code === 410) await db.from('suscripciones_push').delete().eq('endpoint', s.endpoint);
     }
+  }
+  return n;
+}
+
+// Agua: cada 2 horas de 8 a. m. a 8 p. m., solo si va atrasado (lo esperado a esa hora, contando de 7 a. m. a 9 p. m.)
+async function avisoAgua(fecha: string, ahora: number, ahoraISO: string) {
+  const hora = Math.floor(ahora / 60);
+  if (hora < 8 || hora > 20 || hora % 2 !== 0 || ahora % 60 >= 50) return 0;
+  const momento = `agua${hora}`;
+  const { data: perfiles } = await db.from('perfiles').select('id, cuenta_id, nombre, peso_kg, agua_meta').eq('recordar_agua', true);
+  if (!perfiles?.length) return 0;
+  const ids = perfiles.map(p => p.id);
+  const [{ data: ya }, { data: agua }] = await Promise.all([
+    db.from('recordatorios').select('perfil_id').eq('fecha', fecha).eq('momento', momento).in('perfil_id', ids),
+    db.from('agua').select('perfil_id, ml').eq('fecha', fecha).in('perfil_id', ids),
+  ]);
+  const enviado = new Set((ya ?? []).map(x => x.perfil_id));
+  const tomado = new Map<string, number>();
+  for (const r of agua ?? []) tomado.set(r.perfil_id, (tomado.get(r.perfil_id) ?? 0) + r.ml);
+  let n = 0;
+  for (const p of perfiles) {
+    if (enviado.has(p.id)) continue;
+    const meta = p.agua_meta ?? Math.round((35 * Number(p.peso_kg)) / 250) * 250;
+    const esperado = meta * Math.min(1, (ahora - 7 * 60) / (14 * 60));
+    const lleva = Math.max(0, tomado.get(p.id) ?? 0);
+    await db.from('recordatorios').upsert({ perfil_id: p.id, fecha, momento, estado: lleva >= esperado ? 'saltado' : 'enviado', actualizado: ahoraISO });
+    if (lleva >= esperado) continue;
+    const faltan = Math.max(1, Math.round((esperado - lleva) / 250));
+    n += await mandar(p, {
+      titulo: 'Kalo',
+      cuerpo: `${p.nombre}, ¿ya tomaste agua? Vas ${faltan} ${faltan === 1 ? 'vaso' : 'vasos'} atrasado.`,
+      url: './',
+      tag: `kalo-${p.id}-agua`,
+    });
   }
   return n;
 }

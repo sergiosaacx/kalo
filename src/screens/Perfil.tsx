@@ -4,6 +4,7 @@ import { Boton, Campo, FechaNacimiento, Segmento, u } from '../components/ui';
 import { NotificacionesPerfil } from '../components/Notificaciones';
 import { MetaPeso, TarjetaMeta } from './MetaPeso';
 import { MisComidas, TarjetaComidas } from './MisComidas';
+import { LoQueEvito, TarjetaEvito } from './LoQueEvito';
 import { TarjetaSalud } from '../components/Salud';
 import { useSesion, type PerfilActivo } from '../data/sesion';
 import { edadDe, errorFecha, fechaValida, type Sexo } from '../logic/energia';
@@ -13,10 +14,11 @@ import { C } from '../theme';
 // abrir: entrar directo a una sección (la notificación de pesarse abre «Meta de peso»)
 export function Perfil({ nuevoPerfil, abrir }: { nuevoPerfil: () => void; abrir?: 'meta' | null }) {
   const { perfiles, activo, activar, actualizarPerfil, borrarPerfil, salir, sesion } = useSesion();
-  const [viendo, setViendo] = useState<'meta' | 'comidas' | null>(abrir ?? null);
+  const [viendo, setViendo] = useState<'meta' | 'comidas' | 'evito' | null>(abrir ?? null);
   if (!activo) return null;
   if (viendo === 'meta') return <MetaPeso key={activo.id} volver={() => setViendo(null)} />;
   if (viendo === 'comidas') return <MisComidas key={activo.id} volver={() => setViendo(null)} />;
+  if (viendo === 'evito') return <LoQueEvito key={activo.id} volver={() => setViendo(null)} />;
 
   return (
     <View style={{ gap: 14 }}>
@@ -47,6 +49,8 @@ export function Perfil({ nuevoPerfil, abrir }: { nuevoPerfil: () => void; abrir?
       <TarjetaMeta key={'m' + activo.id} p={activo} abrir={() => setViendo('meta')} />
 
       <TarjetaComidas p={activo} abrir={() => setViendo('comidas')} />
+
+      <TarjetaEvito p={activo} abrir={() => setViendo('evito')} />
 
       <TarjetaSalud key={'s' + activo.id} valor={activo.salud} guardar={v => actualizarPerfil(activo.id, { salud: v })} />
 

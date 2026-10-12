@@ -4,6 +4,7 @@ import { Anillo } from '../components/Anillo';
 import { nutrientesItem, useAlimentos, type AlimentoDB } from '../data/alimentos';
 import { COMIDAS, hoyISO, usePlanDia, type ComidaId, type ItemPlan } from '../data/plan';
 import { Personalizado, Semana, lunesDe, rangoTxt } from './Resumen';
+import { TarjetaAgua } from '../components/Agua';
 import { sumarDias } from '../logic/peso';
 import { useSesion } from '../data/sesion';
 import { conSigno, fmt, gasto, macrosObjetivo } from '../logic/energia';
@@ -125,6 +126,8 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
               })}
             </View>
           </View>
+
+          <TarjetaAgua key={dia} fecha={dia} editable={esHoy} />
 
           <View style={[s.card, { gap: 14 }]}>
             <Text style={[s.overline, { fontSize: 12 }]}>Macronutrientes</Text>

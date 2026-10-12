@@ -6,6 +6,7 @@ import { anadidosParaGuardar, bandeja, kcalBandeja, useBandeja, type AnadidoBand
 import { guardarOpcion, tiempoTexto, useOpciones, type Opcion } from '../data/opciones';
 import { AlimentoPicker } from '../components/AlimentoPicker';
 import { ACEITE_CASA_G, FRITOS, sugerencias, type Unidad } from '../logic/anadidos';
+import { choques, revisarItems } from '../logic/evito';
 import { MOMENTOS, responder, type Momento } from '../data/comidas';
 import { COMIDAS, agregarVariosAlPlan, comidaDeAhora, editarItem, hoyISO, nombreComida, quitarItem, type ComidaId, type ItemPlan } from '../data/plan';
 import { useSesion } from '../data/sesion';
@@ -207,6 +208,7 @@ export function Alimentos({ destino, onAgregado, registro, abrirBandeja }: {
                   <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                     <Text style={s.b15} numberOfLines={1}>{it.alimento.nombre}</Text>
                     <Text style={s.muted12} numberOfLines={1}>{it.texto}{FRITOS.has(it.alimento.id) ? ' · ya incluye el aceite' : ''}</Text>
+                    {[it.alimento, ...(it.anadidos ?? []).map(x => x.alimento)].some(x => choques(x, activo?.evito).alergia.length > 0) && <Text style={s.alergiaTxt}>Alergia</Text>}
                     {(it.anadidos ?? []).map((x, k) => (
                       <Text key={k} style={s.extra} numberOfLines={1}>+ {x.alimento.nombre.toLowerCase()} {x.texto} · {fmt(nutrientes(x.alimento, x.cantidad).kcal)} kcal</Text>
                     ))}
@@ -312,6 +314,16 @@ export function EditarItem({ it, cerrar }: { it: ItemPlan; cerrar: (cambio: bool
   );
 }
 
+// Aviso rojo cuando algo lleva lo que le da alergia a la persona
+function AvisoAlergia({ nombre, cosas }: { nombre: string; cosas: string[] }) {
+  return (
+    <View style={s.alerta}>
+      <Text style={s.alertaTit}>{nombre}: alergia a {[...new Set(cosas)].join(', ')}</Text>
+      <Text style={s.alertaTxt}>Kalo no te lo recomienda. Si igual lo agregas, queda anotado.</Text>
+    </View>
+  );
+}
+
 // Lo que se recuerda por persona y alimento: «la abuela toma el café con 2 cucharaditas de panela»
 interface Recuerdo { alimento_id: string; unidades: number; casa?: boolean }
 const claveRecuerdo = (perfilId: string, alimentoId: string) => `kalo_anadidos_${perfilId}_${alimentoId}`;
@@ -329,21 +341,26 @@ interface AnadidoFicha { alimento: AlimentoDB; unidad: Unidad; unidades: number;
 
 // Solo las opciones propias de esa comida; las de Kalo quedan detrás de un botón para que las propias no se pierdan
 function ListaOpciones({ opciones, comida, porId, abrir }: { opciones: Opcion[] | null; comida: ComidaId; porId: Map<string, AlimentoDB>; abrir: (o: Opcion) => void }) {
+  const { activo } = useSesion();
   const [deKalo, setDeKalo] = useState(false);
   if (!opciones || porId.size === 0) return <ActivityIndicator color={C.accent} style={{ marginTop: 30 }} />;
   const deLa = opciones.filter(o => o.comida === comida && o.items.length > 0);
-  const mias = deLa.filter(o => o.fuente !== 'kalo'), kalo = deLa.filter(o => o.fuente === 'kalo');
+  const bloquea = (o: Opcion) => revisarItems(o.items, porId, activo?.evito).bloquea;
+  const mias = deLa.filter(o => o.fuente !== 'kalo'), kalo = deLa.filter(o => o.fuente === 'kalo').sort((a, b) => Number(bloquea(a)) - Number(bloquea(b)));
   const nombre = nombreComida(comida).toLowerCase();
   const tarjeta = (lista: Opcion[]) => (
     <View style={[s.card, { paddingVertical: 4 }]}>
       {lista.map((o, i) => {
         const its = itemsDe(o, porId);
+        const rev = revisarItems(o.items, porId, activo?.evito);
         return (
-          <Pressable key={o.id} onPress={() => abrir(o)} style={[s.opc, i > 0 && s.rowBorde]}>
+          <Pressable key={o.id} onPress={() => abrir(o)} style={[s.opc, i > 0 && s.rowBorde, rev.bloquea && { opacity: 0.55 }]}>
             <View style={s.rowEntre}>
               <Text style={[s.b15, { flex: 1 }]} numberOfLines={2}>{o.nombre}</Text>
               <Text style={s.kcal}>{fmt(kcalDe(its))}</Text>
             </View>
+            {rev.conAlergia.length > 0 ? <Text style={s.alergiaTxt}>Lleva {rev.conAlergia[0].nombre.toLowerCase()} · alergia</Text>
+              : rev.conEvito.length > 0 ? <Text style={s.evitoTxt}>Lleva {rev.conEvito[0].nombre.toLowerCase()} · lo evitas</Text> : null}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <View style={{ flexDirection: 'row' }}>
                 {its.slice(0, 5).map((it, k) => <View key={k} style={[s.miniO, k > 0 && { marginLeft: -9 }]}><Miniatura a={it.alimento} size={28} /></View>)}
@@ -373,7 +390,9 @@ function ListaOpciones({ opciones, comida, porId, abrir }: { opciones: Opcion[] 
 
 // La opción abierta: sus alimentos y «Agregar los N a la bandeja»
 function HojaOpcion({ o, porId, cerrar }: { o: Opcion; porId: Map<string, AlimentoDB>; cerrar: () => void }) {
+  const { activo } = useSesion();
   const its = itemsDe(o, porId);
+  const rev = revisarItems(o.items, porId, activo?.evito);
   return (
     <View style={StyleSheet.absoluteFill}>
       <Pressable style={s.velo} onPress={cerrar} />
@@ -383,6 +402,7 @@ function HojaOpcion({ o, porId, cerrar }: { o: Opcion; porId: Map<string, Alimen
           <Text style={[s.h1, { fontSize: 21, flex: 1 }]} numberOfLines={2}>{o.nombre}</Text>
           <Text style={s.muted13}>{fmt(kcalDe(its))} kcal</Text>
         </View>
+        {rev.conAlergia.length > 0 && activo && <AvisoAlergia nombre={activo.nombre} cosas={rev.conAlergia.map(a => a.nombre.toLowerCase())} />}
         <ScrollView style={{ maxHeight: 320 }} contentContainerStyle={[s.card, { backgroundColor: C.surface2, paddingVertical: 4 }]}>
           {its.map((it, i) => (
             <View key={i} style={[s.row, i > 0 && s.rowBorde]}>
@@ -435,7 +455,9 @@ function Ficha({ a, perfilId, volver, onMedida, inicial, volverTxt = '‹ Alimen
 
   // «Añadidos»: sugerencias de la casa (panela, aceite…) + lo que la persona sume; arranca con lo de la vez pasada
   const mapa = mapaCache();
-  const sug = useMemo(() => sugerencias(a).filter(x => mapa.has(x.alimento_id)), [a.id]);
+  const { activo: perfilFicha } = useSesion();
+  const ev = perfilFicha?.evito;
+  const sug = useMemo(() => sugerencias(a).filter(x => mapa.has(x.alimento_id) && (() => { const c = choques(mapa.get(x.alimento_id)!, ev); return c.alergia.length + c.evito.length === 0; })()), [a.id, ev]);
   const [ads, setAds] = useState<AnadidoFicha[]>(() => inicial ? desdeGuardado(inicial.anadidos ?? [], sug, inicial.cantidad, a.porcion_base.gramos) : recuerdoDe(perfilId, a.id).flatMap(r => {
     const b = mapa.get(r.alimento_id);
     if (!b) return [];
@@ -501,6 +523,13 @@ function Ficha({ a, perfilId, volver, onMedida, inicial, volverTxt = '‹ Alimen
         {a.sinonimos.length > 0 && <Text style={s.muted13}>También: {a.sinonimos.join(', ')}</Text>}
       </View>
       {extra}
+      {(() => {
+        const al = [a, ...ads.map(x => x.alimento)].filter(x => choques(x, ev).alergia.length > 0);
+        const evi = choques(a, ev).evito;
+        if (al.length && perfilFicha) return <AvisoAlergia nombre={perfilFicha.nombre} cosas={al.map(x => x.nombre.toLowerCase())} />;
+        if (evi.length) return <Text style={s.evitoTxt}>Lo evitas: {evi.join(', ').toLowerCase()}. Kalo no te lo recomienda.</Text>;
+        return null;
+      })()}
 
       <View style={[s.card, { gap: 16 }]}>
         <View style={{ minWidth: 0 }}>
@@ -646,6 +675,11 @@ const s = StyleSheet.create({
   quitar: { width: 28, height: 36, alignItems: 'center', justifyContent: 'center' },
   quitarTxt: { color: C.muted, fontSize: 22 },
   opc: { paddingVertical: 11, gap: 6 },
+  alergiaTxt: { fontSize: 12, fontWeight: '700', color: '#FF8A84' },
+  evitoTxt: { fontSize: 12, fontWeight: '700', color: C.accent },
+  alerta: { backgroundColor: '#2A1414', borderWidth: 1, borderColor: '#E5534B', borderRadius: 16, paddingVertical: 12, paddingHorizontal: 14, gap: 4 },
+  alertaTit: { color: '#FF8A84', fontSize: 15, fontWeight: '700' },
+  alertaTxt: { color: C.soft, fontSize: 13 },
   cambiar: { alignSelf: 'flex-start', minHeight: 36, justifyContent: 'center', borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingHorizontal: 12 },
   btnQuitar: { height: 44, borderRadius: 14, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14 },
   btnQuitarTxt: { color: C.text, fontSize: 14, fontWeight: '700' },

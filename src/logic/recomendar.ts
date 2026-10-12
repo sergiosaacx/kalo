@@ -41,12 +41,13 @@ export interface Recomendacion { items: ItemOpcion[]; nombre: string; kcal: numb
 const MIN_Q = 0.5, MAX_Q = 2.5;
 const medio = (n: number) => Math.min(MAX_Q, Math.max(MIN_Q, Math.round(n * 2) / 2));
 
-export function recomendar(comida: ComidaId, semilla: number, presupuesto: number, porId: Map<string, AlimentoDB>): Recomendacion | null {
+// excluir: alimentos que la persona evita o a los que es alérgica («Lo que evito»)
+export function recomendar(comida: ComidaId, semilla: number, presupuesto: number, porId: Map<string, AlimentoDB>, excluir?: (id: string) => boolean): Recomendacion | null {
   const elegir = (conOpcionales: boolean) => {
     const ids: string[] = [];
     GRUPOS[comida].forEach((g, gi) => {
       if (g.opcional && !conOpcionales) return;
-      const disponibles = g.opciones.filter(id => porId.has(id));
+      const disponibles = g.opciones.filter(id => porId.has(id) && !excluir?.(id));
       if (!disponibles.length) return;
       const id = disponibles[(semilla * (gi + 3) + gi * 5 + Math.floor(semilla / 3)) % disponibles.length];
       if (!ids.includes(id)) ids.push(id);

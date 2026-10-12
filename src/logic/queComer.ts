@@ -5,6 +5,7 @@ import { MOMENTOS, horarioDe } from '../data/comidas';
 import type { ItemOpcion, Opcion } from '../data/opciones';
 import type { ComidaId, ItemPlan } from '../data/plan';
 import { PRESUPUESTO, type Perfil } from './energia';
+import { revisarItems } from './evito';
 
 export type Etiqueta = 'frecuente' | 'tuya' | 'nuevo';
 export interface Sugerencia { opcion: Opcion; factor: number; items: ItemOpcion[]; kcal: number; proteina: number; etiqueta: Etiqueta }
@@ -47,6 +48,8 @@ export function armarBloques(args: {
     const candidatas: Sugerencia[] = [];
     for (const o of opciones) {
       if (o.comida !== comida || !o.items.length || !o.items.every(i => porId.has(i.alimento_id))) continue;
+      const rev = revisarItems(o.items, porId, p.evito);
+      if (rev.bloquea) continue; // alergias y lo que no quiere que le recomienden
       const base = o.items.reduce((t, i) => { const n = nutrientesItem(i, porId); return { k: t.k + n.kcal, p: t.p + n.p }; }, { k: 0, p: 0 });
       if (base.k <= 0) continue;
       const factor = porcionDe(meta / base.k);
@@ -56,12 +59,12 @@ export function armarBloques(args: {
         kcal: base.k * factor, proteina: base.p * factor,
         etiqueta: veces > 0 ? 'frecuente' : o.fuente !== 'kalo' ? 'tuya' : 'nuevo',
         // para ordenar: lo frecuente primero; si falta proteína, las que más traen; y que la porción quede cerca de la meta
-        ...{ _veces: veces, _ajuste: Math.abs(base.k * factor - meta) / (meta || 1) },
+        ...{ _veces: veces, _ajuste: Math.abs(base.k * factor - meta) / (meta || 1), _prefiere: rev.prefiere },
       } as Sugerencia);
     }
     const nota = (s: Sugerencia) => {
-      const x = s as Sugerencia & { _veces: number; _ajuste: number };
-      return -x._veces * 10 - (s.etiqueta === 'tuya' ? 5 : 0) + x._ajuste * 8 - (faltaProteina > 20 ? (s.proteina / (s.kcal || 1)) * 40 : 0);
+      const x = s as Sugerencia & { _veces: number; _ajuste: number; _prefiere: number };
+      return -x._prefiere * 3 - x._veces * 10 - (s.etiqueta === 'tuya' ? 5 : 0) + x._ajuste * 8 - (faltaProteina > 20 ? (s.proteina / (s.kcal || 1)) * 40 : 0);
     };
     const conocidas = candidatas.filter(s => s.etiqueta !== 'nuevo').sort((a, b) => nota(a) - nota(b));
     const nuevas = candidatas.filter(s => s.etiqueta === 'nuevo').sort((a, b) => nota(a) - nota(b));

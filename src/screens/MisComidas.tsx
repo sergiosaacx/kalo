@@ -83,7 +83,15 @@ export function MisComidas({ volver }: { volver: () => void }) {
         <Interruptor on={!!p.recordar} cambiar={() => actualizarPerfil(p.id, { recordar: !p.recordar, comidas: horario })} />
       </View>
 
-      {p.recordar && notif !== 'activadas' && (
+      <View style={[u.card, s.entre]}>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={s.nombre}>Recordarme tomar agua</Text>
+          <Text style={s.muted12}>Cada 2 horas, de 8 a. m. a 8 p. m., solo si vas atrasado con tu meta.</Text>
+        </View>
+        <Interruptor on={!!p.recordarAgua} cambiar={() => actualizarPerfil(p.id, { recordarAgua: !p.recordarAgua })} />
+      </View>
+
+      {(p.recordar || p.recordarAgua) && notif !== 'activadas' && (
         <View style={[u.card, { gap: 10 }]}>
           <Text style={u.soft}>
             {notif === 'preguntar' ? 'Para que te lleguen, activa las notificaciones en este celular.'

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { AlimentoPicker } from '../components/AlimentoPicker';
+import { choques, revisarItems } from '../logic/evito';
 import { Boton, Chips, Segmento, u } from '../components/ui';
 import { nutrientes, nutrientesItem, useAlimentos, type AlimentoDB } from '../data/alimentos';
 import { DIFICULTAD, aplicarAlDia, borrarOpcion, guardarOpcion, tiempoTexto, useOpciones, type Dificultad, type ItemOpcion, type Opcion } from '../data/opciones';
@@ -64,7 +65,7 @@ export function Menu() {
     if (!opciones) return;
     const semilla = desdeISO(dia).getDate();
     for (const [c] of COMIDAS) {
-      const cands = opciones.filter(o => o.comida === c && o.items.length)
+      const cands = opciones.filter(o => o.comida === c && o.items.length && !revisarItems(o.items, porId, activo.evito).bloquea)
         .map(o => ({ o, d: Math.abs(totales(o.items, porId).k - presupuesto(c)) }))
         .sort((a, b) => a.d - b.d).slice(0, 4);
       if (!cands.length) continue;
@@ -102,7 +103,7 @@ export function Menu() {
   // ── Recomiéndame: Kalo arma una combinación que cuadre con lo que te toca en esa comida
   if (recom) {
     const pres = presupuesto(recom.comida);
-    const r = recomendar(recom.comida, recom.semilla, pres, porId);
+    const r = recomendar(recom.comida, recom.semilla, pres, porId, id => { const a = porId.get(id); if (!a) return false; const c = choques(a, activo.evito); return c.alergia.length + c.evito.length > 0; });
     const obj = macrosObjetivo(activo, objetivo), parte = PRESUPUESTO[recom.comida];
     const t = r ? totales(r.items, porId) : null;
     return (
@@ -234,7 +235,9 @@ export function Menu() {
           </View>
           {(opciones ?? [])
             .filter(o => o.comida === (eligiendo ?? comidaOp) && (!rapidas || (o.tiempo_min !== null && o.tiempo_min <= 20)))
-            .map(o => {
+            .map(o => ({ o, rev: revisarItems(o.items, porId, activo.evito) }))
+            .sort((a, b) => Number(a.rev.bloquea) - Number(b.rev.bloquea))
+            .map(({ o, rev }) => {
               const t = totales(o.items, porId), aj = ajuste(t.k, presupuesto(o.comida));
               return (
                 <View key={o.id} style={[u.card, { gap: 10, padding: 16 }]}>
@@ -246,6 +249,8 @@ export function Menu() {
                   </View>
                   <View style={{ gap: 3 }}>
                     <Text style={s.nombre}>{o.nombre}</Text>
+                    {rev.conAlergia.length > 0 && <Text style={{ fontSize: 12, fontWeight: '700', color: '#FF8A84' }}>Lleva {rev.conAlergia[0].nombre.toLowerCase()} · alergia</Text>}
+                    {rev.conAlergia.length === 0 && rev.conEvito.length > 0 && <Text style={{ fontSize: 12, fontWeight: '700', color: C.accent }}>Lleva {rev.conEvito[0].nombre.toLowerCase()} · lo evitas</Text>}
                     <Text style={s.muted13} numberOfLines={2}>{o.items.map(i => porId.get(i.alimento_id)?.nombre).filter(Boolean).join(' · ')}</Text>
                     <Text style={s.prep}>
                       {[o.tiempo_min !== null ? tiempoTexto(o.tiempo_min) : null, o.dificultad ? DIFICULTAD[o.dificultad] : null, o.fuente === 'kalo' ? 'Kalo' : 'Tuya']
