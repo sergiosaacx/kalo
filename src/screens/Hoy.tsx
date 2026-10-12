@@ -21,7 +21,7 @@ function sumar(items: ItemPlan[], porId: Map<string, AlimentoDB>, soloComido: bo
   }, { k: 0, p: 0, c: 0, g: 0 });
 }
 
-export function Hoy({ irA, agregarA }: { irA: (tab: string) => void; agregarA: (c: ComidaId) => void }) {
+export function Hoy({ irA, agregarA, verRestante }: { irA: (tab: string) => void; agregarA: (c: ComidaId) => void; verRestante?: () => void }) {
   const [rango, setRango] = useState<string>('hoy');
   const { activo } = useSesion();
   const { lista } = useAlimentos();
@@ -91,13 +91,19 @@ export function Hoy({ irA, agregarA }: { irA: (tab: string) => void; agregarA: (
             </Anillo>
             <Text style={s.msg}>{msg}</Text>
             <View style={s.kpis}>
-              {kpis.map(k => (
-                <View key={k.label} style={s.kpi}>
-                  <Text style={[s.overline, { letterSpacing: 0.66 }]}>{k.label}</Text>
-                  <Text style={[s.kpiVal, { color: k.color }]}>{k.value}</Text>
-                  <Text style={[s.muted13, { fontSize: 11 }]}>kcal</Text>
-                </View>
-              ))}
+              {kpis.map((k, i) => {
+                const contenido = (
+                  <>
+                    <Text style={[s.overline, { letterSpacing: 0.66 }]}>{k.label}</Text>
+                    <Text style={[s.kpiVal, { color: k.color }]}>{k.value}</Text>
+                    <Text style={[s.muted13, { fontSize: 11 }]}>kcal</Text>
+                  </>
+                );
+                // «Restante» se puede tocar: abre «¿Qué como para completar?» (el cuadro se ve igual)
+                return i === 0 && verRestante
+                  ? <Pressable key={k.label} style={s.kpi} onPress={verRestante} accessibilityRole="button">{contenido}</Pressable>
+                  : <View key={k.label} style={s.kpi}>{contenido}</View>;
+              })}
             </View>
           </View>
 

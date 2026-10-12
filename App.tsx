@@ -8,6 +8,7 @@ import { MOMENTOS, esMomento, pendienteDeHoy, type Momento } from './src/data/co
 import { comidaDeAhora, hoyISO, type ComidaId } from './src/data/plan';
 import { IconoGasto, IconoHoy, IconoMas, IconoMenu, IconoPerfil } from './src/components/Iconos';
 import { Pregunta } from './src/screens/Pregunta';
+import { QueComer } from './src/screens/QueComer';
 import { medirPantalla } from './src/data/diagnostico';
 import { SesionProvider, useSesion } from './src/data/sesion';
 import { Alimentos } from './src/screens/Alimentos';
@@ -59,6 +60,10 @@ function Raiz() {
   const [pregunta, setPregunta] = useState<{ momento: Momento; fecha: string; perfilId?: string; libre?: boolean } | null>(null);
   const [registro, setRegistro] = useState<{ momento: Momento; fecha: string; abrirBandeja: boolean } | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  // Hoja «¿Qué como para completar?» (cuadro «Restante» de Hoy); al agregar algo, Hoy se recarga al cerrarla
+  const [queComer, setQueComer] = useState(false);
+  const [agregoAlgo, setAgregoAlgo] = useState(false);
+  const [recarga, setRecarga] = useState(0);
   useEffect(() => {
     if (!listo || Platform.OS !== 'web') return;
     const q = new URLSearchParams(window.location.search);
@@ -121,10 +126,10 @@ function Raiz() {
         <Alimentos key={(destino ?? '') + (registro?.momento ?? '')} destino={destino} registro={registro} abrirBandeja={registro?.abrirBandeja}
           onAgregado={a => { irA('hoy'); if (a) setAviso(a); }} />
       ) : (
-      <ScrollView key={tab + (destino ?? '')} style={{ flex: 1 }} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView key={tab + (destino ?? '') + recarga} style={{ flex: 1 }} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
         {aviso && tab === 'hoy' && <Text style={s.aviso}>{aviso}</Text>}
         {tab === 'hoy' ? (
-          <Hoy irA={irA} agregarA={c => { setDestino(c); setTab('alimentos'); }} />
+          <Hoy irA={irA} agregarA={c => { setDestino(c); setTab('alimentos'); }} verRestante={() => { setAgregoAlgo(false); setQueComer(true); }} />
         ) : tab === 'menu' ? (
           <Menu />
         ) : tab === 'gasto' ? (
@@ -162,6 +167,7 @@ function Raiz() {
           })}
         </View>
       </SafeAreaView>
+      {queComer && <QueComer onAgregado={() => setAgregoAlgo(true)} cerrar={() => { setQueComer(false); if (agregoAlgo) setRecarga(n => n + 1); }} />}
       {letrero && <LetreroNotificaciones onCerrar={() => setLetrero(false)} />}
     </>
   );

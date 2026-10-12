@@ -78,3 +78,14 @@ export async function agregarAlPlan(perfilId: string, comida: ComidaId, alimento
   const { error: e2 } = await supabase.from('plan_items').insert({ plan_id: plan.id, alimento_id: alimentoId, cantidad, orden: Date.now() % 100000 });
   return e2 ? 'No pudimos agregarlo. Inténtalo de nuevo.' : null;
 }
+
+// Cuántas veces anotó (como comido) cada alimento en cada comida el último mes: clave `${comida}|${alimento_id}`
+export async function frecuenciaComidas(perfilId: string, dias = 30) {
+  const desde = hoyISO(new Date(Date.now() - dias * 864e5));
+  const { data } = await supabase.from('plan')
+    .select('comida, plan_items(alimento_id, comido)').eq('perfil_id', perfilId).gte('fecha', desde);
+  const m = new Map<string, number>();
+  for (const p of (data ?? []) as { comida: ComidaId; plan_items: { alimento_id: string; comido: boolean }[] }[])
+    for (const i of p.plan_items) if (i.comido) m.set(`${p.comida}|${i.alimento_id}`, (m.get(`${p.comida}|${i.alimento_id}`) ?? 0) + 1);
+  return m;
+}
