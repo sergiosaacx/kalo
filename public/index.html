@@ -34,8 +34,8 @@
       }
       /* Instalada en el iPhone: el alto lo da la pantalla real (ver el script de abajo) */
       html.instalada, html.instalada body, html.instalada #root { height: var(--alto, 100%); }
-      /* Fuente del handoff para todo el texto */
-      #root, #root * {
+      /* Fuente del handoff para todo el texto (también las ventanas que flotan fuera de #root) */
+      #root, #root *, body * {
         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
       }
       /* Sin zoom por doble toque */

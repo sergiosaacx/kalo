@@ -5,7 +5,7 @@ import { nutrientesItem, useAlimentos, type AlimentoDB } from '../data/alimentos
 import { COMIDAS, hoyISO, usePlanDia, type ComidaId, type ItemPlan } from '../data/plan';
 import { Personalizado, Semana, lunesDe, rangoTxt } from './Resumen';
 import { TarjetaAgua } from '../components/Agua';
-import { Campanita, Desplegable, TarjetaSalud } from '../components/SaludHoy';
+import { Campanita, Desplegable, FilaBarra, Grupo, HojaBarra, TarjetaSalud, type Clave } from '../components/SaludHoy';
 import { notificacionesDeHoy, type Notificacion } from '../data/comidas';
 import { Avatar } from '../components/Avatar';
 import { avisosDelDia, limitesDe, saludDelDia } from '../logic/salud';
@@ -36,6 +36,7 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
   const [rangoP, setRangoP] = useState<[string, string] | null>(null);
   const [avisosAbiertos, setAvisosAbiertos] = useState(false);
   const [notifs, setNotifs] = useState<Notificacion[]>([]);
+  const [explica, setExplica] = useState<Clave | null>(null);
   const esHoy = dia === hoyISO();
   const { activo } = useSesion();
   const { lista } = useAlimentos();
@@ -74,9 +75,9 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
     { label: 'Balance', value: conSigno(hoy.k - en.total), color: C.text },
   ];
   const macros = [
-    { label: 'Proteína', v: hoy.p, t: obj.proteina, color: C.accent },
-    { label: 'Carbohidratos', v: hoy.c, t: obj.carbos, color: C.carbs },
-    { label: 'Grasa', v: hoy.g, t: obj.grasa, color: C.fat },
+    { id: 'proteina' as const, label: 'Proteína', v: hoy.p, t: obj.proteina, color: C.accent },
+    { id: 'carbos' as const, label: 'Carbohidratos', v: hoy.c, t: obj.carbos, color: C.carbs },
+    { id: 'grasa' as const, label: 'Grasa', v: hoy.g, t: obj.grasa, color: C.fat },
   ];
 
   return (
@@ -145,20 +146,13 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
 
           <TarjetaAgua key={dia} fecha={dia} editable={esHoy} />
 
-          <TarjetaSalud d={salud} l={limites} />
+          <TarjetaSalud d={salud} l={limites} tocar={setExplica} />
 
           <View style={[s.card, { gap: 14 }]}>
             <Text style={[s.overline, { fontSize: 12 }]}>Macronutrientes</Text>
+            <Grupo tipo="meta" texto="Llena la barra" sub={pr.meta === 'subir' ? 'es tu comida para subir de peso' : pr.meta === 'bajar' ? 'es tu comida para bajar de peso' : 'es tu comida para mantener tu peso'} />
             {macros.map(m => (
-              <View key={m.label} style={{ gap: 7 }}>
-                <View style={s.row}>
-                  <Text style={s.b14}>{m.label}</Text>
-                  <Text style={[s.muted13, { fontSize: 14 }]}>{fmt(m.v)} g / {fmt(m.t)} g</Text>
-                </View>
-                <View style={s.track}>
-                  <View style={[s.fill, { width: `${Math.min(100, (m.v / m.t) * 100)}%`, backgroundColor: m.color }]} />
-                </View>
-              </View>
+              <FilaBarra key={m.id} nombre={m.label} valor={`${fmt(m.v)} g / ${fmt(m.t)} g`} pct={m.v / m.t} color={m.color} tocar={() => setExplica(m.id)} />
             ))}
           </View>
 
@@ -229,6 +223,10 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
             );
           })}
         </>
+      )}
+      {explica && (
+        <HojaBarra clave={explica} cerrar={() => setExplica(null)}
+          x={{ d: salud, l: limites, peso: pr.peso, meta: pr.meta, macros: { proteina: { v: hoy.p, t: obj.proteina }, carbos: { v: hoy.c, t: obj.carbos }, grasa: { v: hoy.g, t: obj.grasa } } }} />
       )}
     </View>
   );
