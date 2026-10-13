@@ -20,7 +20,7 @@ export const GRUPOS: Grupo[] = [
   { id: 'huevo', nombre: 'Huevo', tipo: 'alergia', incluye: o(empieza('huevo'), ids('clara', 'yema', 'arepa-huevo', 'mayonesa', 'torta')) },
   { id: 'leche', nombre: 'Leche', tipo: 'alergia', incluye: o(empieza('queso', 'yogur', 'leche-entera', 'leche-descremada', 'leche-deslactosada', 'leche-semidescremada', 'leche-polvo', 'leche-condensada'),
     ids('quesillo', 'cuajada', 'kumis', 'kefir', 'crema-leche', 'crema-agria', 'suero-costeno', 'mantequilla', 'arequipe', 'cafe-con-leche', 'chocolate-caliente', 'batido-banano', 'avena-bebida', 'helado', 'almojabana', 'pandebono', 'bunuelo', 'arepa-queso')) },
-  { id: 'gluten', nombre: 'Gluten', tipo: 'alergia', incluye: o(empieza('pan-', 'pasta', 'galleta-'), ids('fideos', 'harina-trigo', 'tortilla-trigo', 'cuscus', 'cebada', 'mogolla', 'torta', 'cerveza', 'pollo-apanado')) },
+  { id: 'gluten', nombre: 'Gluten', tipo: 'alergia', incluye: o(empieza('pan-', 'pasta', 'galleta-'), ids('fideos', 'harina-trigo', 'tortilla-trigo', 'cuscus', 'cebada', 'mogolla', 'torta', 'cerveza', 'pollo-apanado', 'pollo-frito')) },
   { id: 'nueces', nombre: 'Nueces', tipo: 'alergia', incluye: ids('almendras', 'nueces', 'nuez-brasil', 'avellana', 'macadamia', 'maranon', 'pistacho', 'leche-almendras') },
   // No me lo recomienden
   { id: 'jugos', nombre: 'Jugos de fruta', tipo: 'evito', incluye: o(empieza('jugo-'), ids('limonada', 'limonada-coco')),

@@ -14,10 +14,10 @@ const DULCE = new Set(['cafe', 'cafe-con-leche', 'te', 'chocolate-agua', 'chocol
 const CON_LECHE = new Set(['cafe', 'te']);
 // Lo que en la casa se prepara con aceite y en Kalo está «al natural»
 const ACEITE = new Set(['arroz-blanco', 'arroz-integral', 'arroz-parbolizado', 'papa-criolla', 'papa-pastusa', 'papa-sabanera', 'yuca', 'arracacha',
-  'arepa-maiz-blanco', 'arepa-maiz-amarillo', 'arepa-queso', 'pasta', 'pasta-integral', 'fideos', 'quinua', 'pechuga', 'bistec', 'lomo-res',
+  'arepa-maiz-blanco', 'arepa-maiz-amarillo', 'arepa-queso', 'pasta', 'pasta-integral', 'fideos', 'quinua', 'pechuga', 'pollo-sudado', 'bistec', 'lomo-res',
   'lomo-cerdo', 'punta-anca', 'chuleta-cerdo', 'carne-molida', 'carne-molida-magra', 'tilapia', 'trucha', 'salmon', 'merluza', 'robalo', 'bagre', 'huevo']);
 // Lo que Kalo ya tiene frito: el aceite viene incluido
-export const FRITOS = new Set(['platano-maduro-frito', 'patacon', 'papa-frita', 'yuca-frita', 'huevo-frito', 'pescado-frito', 'pollo-apanado',
+export const FRITOS = new Set(['platano-maduro-frito', 'patacon', 'papa-frita', 'yuca-frita', 'huevo-frito', 'pescado-frito', 'pollo-apanado', 'pollo-frito',
   'chicharron', 'empanada', 'bunuelo', 'huevo-pericos', 'arepa-huevo']);
 
 // «Como en la casa»: unos 4,5 g de aceite (40 kcal) por porción del alimento (p. ej. 1 taza de arroz)
