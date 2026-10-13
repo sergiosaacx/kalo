@@ -53,6 +53,8 @@ export interface Perfil {
   foto?: string | null;        // foto de perfil (subida) o avatar de Kalo
   aguaMeta?: number | null;   // ml/día; null = 35 ml por kilo
   recordarAgua?: boolean;
+  avisarExceso?: boolean;      // aviso al celular si se pasa del tope de sodio, azúcar o grasa saturada
+  objetivoKcal?: number | null; // la meta de calorías de hoy, guardada para que el servidor calcule los topes
   evito?: { alergias: string[]; evito: string[]; prefiero: string[]; alergiaAlimentos: string[]; evitoAlimentos: string[] } | null; // «Lo que evito»
 }
 

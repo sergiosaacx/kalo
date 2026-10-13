@@ -40,7 +40,7 @@ export async function responder(perfilId: string, fecha: string, momento: Moment
 export interface Notificacion { momento: string; estado: string; hora: string }
 export async function notificacionesDeHoy(perfilId: string, fecha: string): Promise<Notificacion[]> {
   const { data } = await supabase.from('recordatorios').select('momento, estado, actualizado')
-    .eq('perfil_id', perfilId).eq('fecha', fecha).neq('estado', 'saltado').order('actualizado', { ascending: false });
+    .eq('perfil_id', perfilId).eq('fecha', fecha).neq('estado', 'saltado').not('momento', 'like', 'exceso%').order('actualizado', { ascending: false });
   return (data ?? []).map(r => {
     const d = new Date(r.actualizado);
     return { momento: r.momento, estado: r.estado, hora: horaTexto(`${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`) };

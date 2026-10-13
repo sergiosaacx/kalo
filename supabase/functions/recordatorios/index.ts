@@ -36,6 +36,7 @@ Deno.serve(async req => {
   if (error) return new Response(error.message, { status: 500 });
   let enviados = await avisoPesarse(fecha, ahora, col.getUTCDay(), ahoraISO);
   enviados += await avisoAgua(fecha, ahora, ahoraISO);
+  enviados += await avisoExceso(fecha, ahora, ahoraISO);
   if (!perfiles?.length) return Response.json({ enviados });
 
   const ids = perfiles.map(p => p.id);
@@ -159,6 +160,79 @@ async function avisoPesarse(fecha: string, ahora: number, diaSemana: number, aho
       url: `./?pesarse=1&perfil=${p.id}`,
       tag: `kalo-${p.id}-peso`,
     });
+  }
+  return n;
+}
+
+// ---- Aviso de exceso: se pasó del tope de sodio, azúcar libre o grasa saturada del día (una vez por cosa al día) ----
+// Mismos cálculos que src/logic/salud.ts (topes de la OMS sobre la meta de calorías que guarda la app)
+const LIBRES = new Set(['azucar', 'panela', 'miel', 'aguapanela', 'bocadillo', 'banano-bocadillo', 'arequipe', 'mermelada', 'leche-condensada', 'gaseosa', 'helado', 'torta',
+  'pan-dulce', 'limonada', 'limonada-coco', 'chocolate-mesa', 'chocolate-agua', 'chocolate-caliente', 'cereal-arroz', 'corn-flakes', 'granola', 'galleta-integral',
+  'yogur-fruta', 'batido-banano', 'avena-bebida', 'colada', 'mazamorra']);
+const azucarLibre = (id: string) => LIBRES.has(id) || id.startsWith('jugo-');
+type Cosa = 'sodio' | 'azucar' | 'grasaSat';
+const EXCESO: Record<Cosa, { titulo: string; nombre: string; un: string; consejo: string }> = {
+  azucar: { titulo: 'Cuidado con el azúcar', nombre: 'azúcar', un: 'g', consejo: 'Por hoy, mejor nada más de dulce, gaseosa ni jugos.' },
+  sodio: { titulo: 'Cuidado con la sal', nombre: 'sodio', un: 'mg', consejo: 'Por hoy, mejor sin sal extra, embutidos ni paquetes.' },
+  grasaSat: { titulo: 'Cuidado con la grasa', nombre: 'grasa saturada', un: 'g', consejo: 'Por hoy, mejor sin fritos, embutidos ni queso extra.' },
+};
+const fmtCO = (n: number) => Math.round(n).toLocaleString('es-CO');
+
+async function avisoExceso(fecha: string, ahora: number, ahoraISO: string) {
+  if (ahora < 6 * 60 || ahora >= 23 * 60) return 0; // de noche no se molesta
+  const { data: perfiles } = await db.from('perfiles').select('id, cuenta_id, nombre, objetivo_kcal').eq('avisar_exceso', true);
+  if (!perfiles?.length) return 0;
+  const ids = perfiles.map(p => p.id);
+  const [{ data: ya }, { data: planes }] = await Promise.all([
+    db.from('recordatorios').select('perfil_id, momento').eq('fecha', fecha).like('momento', 'exceso%').in('perfil_id', ids),
+    db.from('plan').select('perfil_id, plan_items(alimento_id, cantidad, comido, anadidos)').eq('fecha', fecha).in('perfil_id', ids),
+  ]);
+  const enviado = new Set((ya ?? []).map(x => `${x.perfil_id}|${x.momento}`));
+  type Parte = { alimento_id: string; cantidad: number };
+  const comido = new Map<string, Parte[]>();
+  for (const pl of planes ?? []) for (const it of (pl.plan_items ?? []) as (Parte & { comido: boolean; anadidos: Parte[] | null })[]) {
+    if (!it.comido) continue;
+    const l = comido.get(pl.perfil_id) ?? [];
+    l.push(it, ...(it.anadidos ?? []));
+    comido.set(pl.perfil_id, l);
+  }
+  if (!comido.size) return 0;
+  const alIds = [...new Set([...comido.values()].flat().map(x => x.alimento_id))];
+  const { data: als } = await db.from('alimentos').select('id, nombre, porcion_base, por_100g').in('id', alIds);
+  const porId = new Map((als ?? []).map(a => [a.id, a]));
+  let n = 0;
+  for (const p of perfiles) {
+    const partes = comido.get(p.id);
+    if (!partes) continue;
+    const suma: Record<Cosa, Map<string, number>> = { sodio: new Map(), azucar: new Map(), grasaSat: new Map() };
+    for (const x of partes) {
+      const a = porId.get(x.alimento_id);
+      if (!a) continue;
+      const g = Number(a.porcion_base?.gramos ?? 0) * Number(x.cantidad);
+      const v = (k: string) => Number(a.por_100g?.[k] ?? 0) * g / 100;
+      const add = (c: Cosa, val: number) => { if (val > 0) suma[c].set(a.nombre, (suma[c].get(a.nombre) ?? 0) + val); };
+      add('sodio', v('sodio_mg'));
+      add('grasaSat', v('grasa_sat_g'));
+      if (azucarLibre(a.id)) add('azucar', v('azucar_g'));
+    }
+    // Sin la meta de calorías (no ha abierto Kalo desde este cambio) solo se revisa el sodio, que es fijo
+    const kcal = p.objetivo_kcal;
+    const tope: Record<Cosa, number> = { sodio: 2000, azucar: kcal ? Math.round(kcal * 0.1 / 4) : Infinity, grasaSat: kcal ? Math.round(kcal * 0.1 / 9) : Infinity };
+    for (const c of ['azucar', 'sodio', 'grasaSat'] as Cosa[]) {
+      const momento = `exceso_${c}`;
+      if (enviado.has(`${p.id}|${momento}`)) continue;
+      const total = [...suma[c].values()].reduce((s, x) => s + x, 0);
+      if (total < tope[c]) continue;
+      await db.from('recordatorios').upsert({ perfil_id: p.id, fecha, momento, estado: 'enviado', actualizado: ahoraISO });
+      const mas = [...suma[c].entries()].sort((x, y) => y[1] - x[1])[0][0].toLowerCase();
+      const e = EXCESO[c];
+      n += await mandar(p, {
+        titulo: e.titulo,
+        cuerpo: `${p.nombre}, hoy ya pasaste tu tope de ${e.nombre}: ${fmtCO(total)} de ${fmtCO(tope[c])} ${e.un}. Lo que más aportó: ${mas}. ${e.consejo}`,
+        url: './',
+        tag: `kalo-${p.id}-${momento}`,
+      });
+    }
   }
   return n;
 }

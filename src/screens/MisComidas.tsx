@@ -91,7 +91,15 @@ export function MisComidas({ volver }: { volver: () => void }) {
         <Interruptor on={!!p.recordarAgua} cambiar={() => actualizarPerfil(p.id, { recordarAgua: !p.recordarAgua })} />
       </View>
 
-      {(p.recordar || p.recordarAgua) && notif !== 'activadas' && (
+      <View style={[u.card, s.entre]}>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={s.nombre}>Avisarme si me paso</Text>
+          <Text style={s.muted12}>Si pasas tu tope de azúcar, sodio o grasa saturada del día, te llega un aviso con lo que más aportó.</Text>
+        </View>
+        <Interruptor on={p.avisarExceso !== false} cambiar={() => actualizarPerfil(p.id, { avisarExceso: p.avisarExceso === false })} />
+      </View>
+
+      {(p.recordar || p.recordarAgua || p.avisarExceso !== false) && notif !== 'activadas' && (
         <View style={[u.card, { gap: 10 }]}>
           <Text style={u.soft}>
             {notif === 'preguntar' ? 'Para que te lleguen, activa las notificaciones en este celular.'

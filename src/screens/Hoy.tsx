@@ -38,10 +38,13 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
   const [notifs, setNotifs] = useState<Notificacion[]>([]);
   const [explica, setExplica] = useState<Clave | null>(null);
   const esHoy = dia === hoyISO();
-  const { activo } = useSesion();
+  const { activo, actualizarPerfil } = useSesion();
   const { lista } = useAlimentos();
   const { items, alternar } = usePlanDia(activo?.id, dia);
   useEffect(() => { if (activo?.id) notificacionesDeHoy(activo.id, hoyISO()).then(setNotifs); }, [activo?.id, avisosAbiertos]);
+  // El servidor calcula los topes del aviso de exceso con la meta de calorías de hoy: se guarda cuando cambia
+  const metaHoy = activo ? Math.round(gasto(activo).objetivo) : 0;
+  useEffect(() => { if (activo && activo.objetivoKcal !== metaHoy) actualizarPerfil(activo.id, { objetivoKcal: metaHoy }); }, [activo?.id, metaHoy]);
   if (!activo) return null;
   const pr = activo;
   const porId = new Map((lista ?? []).map(a => [a.id, a]));

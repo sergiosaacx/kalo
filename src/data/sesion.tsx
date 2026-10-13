@@ -15,6 +15,7 @@ interface PerfilDB {
   comidas: Perfil['comidas']; recordar: boolean;
   gasto_real: number | null; gasto_real_fecha: string | null; pesarse: Perfil['pesarse'];
   agua_meta: number | null; recordar_agua: boolean; evito: Perfil['evito']; foto: string | null;
+  avisar_exceso: boolean; objetivo_kcal: number | null;
 }
 
 const desdeDB = (r: PerfilDB): Perfil & { activo: boolean } => ({
@@ -25,6 +26,7 @@ const desdeDB = (r: PerfilDB): Perfil & { activo: boolean } => ({
   ajusteKcal: r.ajuste_kcal ?? 0, ajusteDesde: r.ajuste_desde ?? undefined, salud: r.salud, comidas: r.comidas, recordar: r.recordar,
   gastoReal: r.gasto_real, gastoRealFecha: r.gasto_real_fecha, pesarse: r.pesarse,
   aguaMeta: r.agua_meta, recordarAgua: r.recordar_agua, evito: r.evito, foto: r.foto,
+  avisarExceso: r.avisar_exceso ?? true, objetivoKcal: r.objetivo_kcal,
 });
 
 const haciaDB = (p: Partial<Perfil>) => {
@@ -57,6 +59,8 @@ const haciaDB = (p: Partial<Perfil>) => {
   if (p.recordarAgua !== undefined) m.recordar_agua = p.recordarAgua;
   if (p.evito !== undefined) m.evito = p.evito;
   if (p.foto !== undefined) m.foto = p.foto;
+  if (p.avisarExceso !== undefined) m.avisar_exceso = p.avisarExceso;
+  if (p.objetivoKcal !== undefined) m.objetivo_kcal = p.objetivoKcal;
   return m;
 };
 
