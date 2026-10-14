@@ -76,7 +76,6 @@ export function Alimentos({ destino, onAgregado, registro, abrirBandeja }: {
     if (!abierto || !elegido) return;
     const it: ItemBandeja = { alimento: abierto, cantidad: elegido.cantidad, texto: elegido.texto, anadidos: elegido.anadidos };
     bandeja.agregar(it);
-    if (activo) recordarAnadidos(activo.id, abierto.id, elegido.recordar);
     // «Guardarlo como mío»: queda como opción propia de esta comida (sale en «Mis opciones» y al buscar)
     if (elegido.guardarComo) {
       guardarOpcion({ comida, nombre: elegido.guardarComo, items: [{ alimento_id: abierto.id, cantidad: it.cantidad, anadidos: anadidosParaGuardar(it) }], tiempo_min: null, dificultad: null })
@@ -373,7 +372,6 @@ export function EditarItem({ it, cerrar }: { it: ItemPlan; cerrar: (cambio: bool
     const e = await editarItem(it.id, { alimento_id: a.id, cantidad: elegido.cantidad, anadidos: anadidosParaGuardar({ alimento: a, cantidad: elegido.cantidad, texto: '', anadidos: elegido.anadidos }) });
     setOcupado(false);
     if (e) return setError(e);
-    if (activo) recordarAnadidos(activo.id, a.id, elegido.recordar);
     cerrar(true);
   };
   const quitar = async () => {
@@ -434,16 +432,9 @@ function AvisoAlergia({ nombre, cosas }: { nombre: string; cosas: string[] }) {
   );
 }
 
-// Lo que se recuerda por persona y alimento: «la abuela toma el café con 2 cucharaditas de panela»
+// Los añadidos NO se recuerdan de una vez para otra: el alimento sale limpio. Solo vuelven si se guardó como preparación propia
+// («Guardarlo como mío» → sale en «Mis opciones» y al buscar). Recuerdo = cómo se escogió cada añadido en esta ficha.
 interface Recuerdo { alimento_id: string; unidades: number; casa?: boolean }
-const claveRecuerdo = (perfilId: string, alimentoId: string) => `kalo_anadidos_${perfilId}_${alimentoId}`;
-function recordarAnadidos(perfilId: string, alimentoId: string, r: Recuerdo[] | undefined) {
-  try { localStorage.setItem(claveRecuerdo(perfilId, alimentoId), JSON.stringify(r ?? [])); } catch { /* sin almacenamiento */ }
-}
-function recuerdoDe(perfilId: string | undefined, alimentoId: string): Recuerdo[] {
-  if (!perfilId) return [];
-  try { return JSON.parse(localStorage.getItem(claveRecuerdo(perfilId, alimentoId)) ?? '[]'); } catch { return []; }
-}
 
 interface Elegido { cantidad: number; texto: string; anadidos?: AnadidoBandeja[]; recordar?: Recuerdo[]; guardarComo?: string | null }
 // Un añadido en la ficha: en unidades de cocina (cucharaditas) o en porciones del alimento si es «otra cosa»
@@ -563,17 +554,12 @@ function Ficha({ a, perfilId, volver, onMedida, inicial, volverTxt = '‹ Alimen
   const gOk = Number.isFinite(g) && g > 0 && g <= 3000;
   const cantidad = modo === 'g' ? (gOk ? g / a.porcion_base.gramos : 0) : mult;
 
-  // «Añadidos»: sugerencias de la casa (panela, aceite…) + lo que la persona sume; arranca con lo de la vez pasada
+  // «Añadidos»: sugerencias de la casa (panela, aceite…) + lo que la persona sume; arranca vacío (o con lo ya anotado, al editar)
   const mapa = mapaCache();
   const { activo: perfilFicha } = useSesion();
   const ev = perfilFicha?.evito;
   const sug = useMemo(() => sugerencias(a).filter(x => mapa.has(x.alimento_id) && (() => { const c = choques(mapa.get(x.alimento_id)!, ev); return c.alergia.length + c.evito.length === 0; })()), [a.id, ev]);
-  const [ads, setAds] = useState<AnadidoFicha[]>(() => inicial ? desdeGuardado(inicial.anadidos ?? [], sug, inicial.cantidad, a.porcion_base.gramos) : recuerdoDe(perfilId, a.id).flatMap(r => {
-    const b = mapa.get(r.alimento_id);
-    if (!b) return [];
-    const sg = sug.find(x => x.alimento_id === r.alimento_id && !!x.casa === !!r.casa);
-    return [sg ? { alimento: b, unidad: sg.unidad, unidades: r.unidades, casa: sg.casa } : { alimento: b, unidad: porcionUnidad(b), unidades: r.unidades, generico: true }];
-  }));
+  const [ads, setAds] = useState<AnadidoFicha[]>(() => inicial ? desdeGuardado(inicial.anadidos ?? [], sug, inicial.cantidad, a.porcion_base.gramos) : []);
   const [picker, setPicker] = useState(false);
   const [guardar, setGuardar] = useState(false);
   const [nombreMio, setNombreMio] = useState(`Mi ${a.nombre.toLowerCase()}`);
