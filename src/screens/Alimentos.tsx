@@ -11,7 +11,7 @@ import { Advertencia, Sellos } from '../components/Sellos';
 import { NOMBRE, UNIDAD, cruzaLimite, limitesDe, saludDelDia } from '../logic/salud';
 import { gasto } from '../logic/energia';
 import { MOMENTOS, responder, type Momento } from '../data/comidas';
-import { COMIDAS, agregarVariosAlPlan, comidaDeAhora, editarItem, hoyISO, nombreComida, quitarItem, usePlanDia, type ComidaId, type ItemPlan } from '../data/plan';
+import { COMIDAS, agregarVariosAlPlan, comidaDeAhora, editarItem, hoyISO, moverItems, nombreComida, quitarItem, usePlanDia, type ComidaId, type ItemPlan } from '../data/plan';
 import { useSesion } from '../data/sesion';
 import { fmt } from '../logic/energia';
 import { C } from '../theme';
@@ -315,12 +315,30 @@ export const itemsDe = (o: Opcion, porId: Map<string, AlimentoDB>): ItemBandeja[
     return { alimento: a, cantidad: i.cantidad, texto: textoCantidad(a, i.cantidad), anadidos, nombre: a.id === ENSALADA_ID ? o.nombre : undefined };
   });
 export const kcalDe = (its: ItemBandeja[]) => its.reduce((t, it) => t + kcalBandeja(it), 0);
+// «Pasar a»: la comida donde queda lo que se está editando (se aplica al guardar)
+function PasarA({ actual, destino, cambiar }: { actual: ComidaId; destino: ComidaId; cambiar: (c: ComidaId) => void }) {
+  return (
+    <View style={[s.card, { gap: 8, padding: 14 }]}>
+      <Text style={s.overline}>Pasar a</Text>
+      <Chips<ComidaId> opciones={COMIDAS} valor={destino} onCambio={cambiar} />
+      <Text style={s.muted12}>{destino === actual ? `Está en ${nombreComida(actual).toLowerCase()}. Toca otra comida para pasarlo.` : `Queda en ${nombreComida(destino).toLowerCase()} con su medida y añadidos.`}</Text>
+    </View>
+  );
+}
+// Guarda los cambios y, si escogió otra comida, lo pasa allá
+async function pasarSiCambio(it: ItemPlan, perfilId: string | undefined, destino: ComidaId) {
+  if (destino === it.comida || !perfilId) return null;
+  return moverItems(perfilId, it.fecha ?? hoyISO(), [it.id], destino);
+}
+
 // Una ensalada guardada: una opción propia con un solo ítem «ensalada»
 const esEnsalada = (o: Opcion) => o.fuente !== 'kalo' && o.items.length === 1 && o.items[0].alimento_id === ENSALADA_ID;
 
 // Editar desde Hoy una ensalada ya anotada: se abre armada, igual que al crearla
 function EditarEnsalada({ it, cerrar }: { it: ItemPlan; cerrar: (cambio: boolean) => void }) {
   const { lista } = useAlimentos();
+  const { activo } = useSesion();
+  const [destino, setDestino] = useState<ComidaId>(it.comida);
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const porId = useMemo(() => new Map((lista ?? []).map(a => [a.id, a])), [lista]);
@@ -332,12 +350,14 @@ function EditarEnsalada({ it, cerrar }: { it: ItemPlan; cerrar: (cambio: boolean
         ocupado={ocupado} volver={() => cerrar(false)}
         onListo={async r => {
           setOcupado(true);
-          const e = await editarItem(it.id, { alimento_id: ENSALADA_ID, cantidad: 1, anadidos: r.anadidos.map(x => ({ alimento_id: x.alimento.id, cantidad: x.cantidad })), nombre: r.nombre || 'Ensalada' });
+          const e = await editarItem(it.id, { alimento_id: ENSALADA_ID, cantidad: 1, anadidos: r.anadidos.map(x => ({ alimento_id: x.alimento.id, cantidad: x.cantidad })), nombre: r.nombre || 'Ensalada' })
+            ?? await pasarSiCambio(it, activo?.id, destino);
           setOcupado(false);
           if (e) setError(e); else cerrar(true);
         }}
         extra={(
           <>
+            <PasarA actual={it.comida} destino={destino} cambiar={setDestino} />
             {error && <Text style={u.error}>{error}</Text>}
             <Boton texto={`Quitar del ${comida}`} tipo="borde" onPress={async () => {
               setOcupado(true);
@@ -361,6 +381,7 @@ export function EditarItem({ it, cerrar }: { it: ItemPlan; cerrar: (cambio: bool
   const [picker, setPicker] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [destino, setDestino] = useState<ComidaId>(it.comida);
   useEffect(() => { if (lista && !a) setA(lista.find(x => x.id === it.alimento_id) ?? null); }, [lista]);
   if (it.alimento_id === ENSALADA_ID) return <EditarEnsalada it={it} cerrar={cerrar} />;
   if (!a) return <ActivityIndicator color={C.accent} style={{ marginTop: 40 }} />;
@@ -369,7 +390,8 @@ export function EditarItem({ it, cerrar }: { it: ItemPlan; cerrar: (cambio: bool
   const guardar = async () => {
     if (!elegido) return;
     setOcupado(true);
-    const e = await editarItem(it.id, { alimento_id: a.id, cantidad: elegido.cantidad, anadidos: anadidosParaGuardar({ alimento: a, cantidad: elegido.cantidad, texto: '', anadidos: elegido.anadidos }) });
+    const e = await editarItem(it.id, { alimento_id: a.id, cantidad: elegido.cantidad, anadidos: anadidosParaGuardar({ alimento: a, cantidad: elegido.cantidad, texto: '', anadidos: elegido.anadidos }) })
+      ?? await pasarSiCambio(it, activo?.id, destino);
     setOcupado(false);
     if (e) return setError(e);
     cerrar(true);
@@ -401,9 +423,12 @@ export function EditarItem({ it, cerrar }: { it: ItemPlan; cerrar: (cambio: bool
         ) : (
           <Ficha key={a.id} a={a} perfilId={activo?.id} volverTxt="‹ Hoy" volver={() => cerrar(false)} onMedida={setElegido} inicial={inicial}
             extra={(
-              <Pressable onPress={() => setPicker(true)} style={s.cambiar}>
-                <Text style={[s.link, { fontSize: 14 }]}>Cambiar por otro alimento</Text>
-              </Pressable>
+              <>
+                <PasarA actual={it.comida} destino={destino} cambiar={setDestino} />
+                <Pressable onPress={() => setPicker(true)} style={s.cambiar}>
+                  <Text style={[s.link, { fontSize: 14 }]}>Cambiar por otro alimento</Text>
+                </Pressable>
+              </>
             )} />
         )}
       </ScrollView>

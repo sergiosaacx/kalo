@@ -19,7 +19,7 @@ export function comidaDeAhora(d = new Date()): ComidaId {
 export const hoyISO = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-export interface ItemPlan { id: string; alimento_id: string; cantidad: number; comido: boolean; comida: ComidaId; anadidos?: Anadido[] | null; nombre?: string | null }
+export interface ItemPlan { id: string; alimento_id: string; cantidad: number; comido: boolean; comida: ComidaId; anadidos?: Anadido[] | null; nombre?: string | null; fecha?: string }
 
 // Plan de un día para un perfil: ítems por comida, con cambios guardados al instante
 export function usePlanDia(perfilId: string | undefined, fecha = hoyISO()) {
@@ -35,7 +35,7 @@ export function usePlanDia(perfilId: string | undefined, fecha = hoyISO()) {
     const n: Partial<Record<ComidaId, string>> = {};
     for (const p of (data ?? []) as { comida: ComidaId; nombre: string | null; plan_items: (Omit<ItemPlan, 'comida'> & { orden: number })[] }[]) {
       if (p.nombre) n[p.comida] = p.nombre;
-      for (const it of [...p.plan_items].sort((a, b) => a.orden - b.orden)) lista.push({ ...it, cantidad: Number(it.cantidad), comida: p.comida });
+      for (const it of [...p.plan_items].sort((a, b) => a.orden - b.orden)) lista.push({ ...it, cantidad: Number(it.cantidad), comida: p.comida, fecha });
     }
     setItems(lista);
     setNombres(n);
@@ -95,6 +95,16 @@ export async function frecuenciaComidas(perfilId: string, dias = 30) {
 export async function editarItem(id: string, cambios: { alimento_id: string; cantidad: number; anadidos: Anadido[] | null; nombre?: string | null }) {
   const { error } = await supabase.from('plan_items').update(cambios).eq('id', id);
   return error ? 'No pudimos guardar el cambio. Revisa tu conexión e inténtalo de nuevo.' : null;
+}
+// Pasar lo ya anotado a otra comida del mismo día: conserva medida, añadidos y si ya estaba comido
+export async function moverItems(perfilId: string, fecha: string, ids: string[], comida: ComidaId) {
+  if (!ids.length) return null;
+  const { data: plan, error } = await supabase.from('plan')
+    .upsert({ perfil_id: perfilId, fecha, comida }, { onConflict: 'perfil_id,fecha,comida' })
+    .select('id').single();
+  if (error || !plan) return 'No pudimos pasarlo. Revisa tu conexión e inténtalo de nuevo.';
+  const { error: e2 } = await supabase.from('plan_items').update({ plan_id: plan.id }).in('id', ids);
+  return e2 ? 'No pudimos pasarlo. Inténtalo de nuevo.' : null;
 }
 export async function quitarItem(id: string) {
   const { error } = await supabase.from('plan_items').delete().eq('id', id);

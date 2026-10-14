@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Anillo } from '../components/Anillo';
 import { nutrientesItem, useAlimentos, type AlimentoDB } from '../data/alimentos';
-import { COMIDAS, hoyISO, usePlanDia, type ComidaId, type ItemPlan } from '../data/plan';
+import { COMIDAS, hoyISO, moverItems, nombreComida, usePlanDia, type ComidaId, type ItemPlan } from '../data/plan';
 import { Personalizado, Semana, lunesDe, rangoTxt } from './Resumen';
 import { TarjetaAgua } from '../components/Agua';
 import { Campanita, Desplegable, FilaBarra, Grupo, HojaBarra, TarjetaSalud, type Clave } from '../components/SaludHoy';
@@ -42,10 +42,13 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
   const [avisosAbiertos, setAvisosAbiertos] = useState(false);
   const [notifs, setNotifs] = useState<Notificacion[]>([]);
   const [explica, setExplica] = useState<Clave | null>(null);
+  // «Mover»: la comida en la que se están marcando alimentos para pasarlos a otra
+  const [moviendo, setMoviendo] = useState<{ de: ComidaId; ids: Set<string>; a: ComidaId | null; error?: string } | null>(null);
+  const [pasando, setPasando] = useState(false);
   const esHoy = dia === hoyISO();
   const { activo, actualizarPerfil } = useSesion();
   const { lista } = useAlimentos();
-  const { items, alternar } = usePlanDia(activo?.id, dia);
+  const { items, alternar, recargar } = usePlanDia(activo?.id, dia);
   useEffect(() => { if (activo?.id) notificacionesDeHoy(activo.id, hoyISO()).then(setNotifs); }, [activo?.id, avisosAbiertos]);
   // El servidor calcula los topes del aviso de exceso con la meta de calorías de hoy: se guarda cuando cambia
   const metaHoy = activo ? Math.round(gasto(activo).objetivo) : 0;
@@ -190,7 +193,14 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
               <View key={m} style={[s.card, { padding: 16, paddingBottom: 8 }]}>
                 <View style={[s.row, { paddingBottom: 6, alignItems: 'baseline' }]}>
                   <Text style={[s.b14, { fontSize: 16, fontWeight: '700' }]}>{label}</Text>
-                  <Text style={s.muted13}>{fmt(sumar(delaComida, porId, true).k)} / {fmt(sumar(delaComida, porId, false).k)} kcal</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 12 }}>
+                    <Text style={s.muted13}>{fmt(sumar(delaComida, porId, true).k)} / {fmt(sumar(delaComida, porId, false).k)} kcal</Text>
+                    {delaComida.length > 0 && (
+                      <Pressable onPress={() => setMoviendo(mv => (mv?.de === m ? null : { de: m, ids: new Set(), a: null }))} hitSlop={8}>
+                        <Text style={[s.link, { fontSize: 13 }]}>{moviendo?.de === m ? 'Cancelar' : 'Mover'}</Text>
+                      </Pressable>
+                    )}
+                  </View>
                 </View>
                 {delaComida.length === 0 && items !== null && !esHoy && <Text style={[s.muted13, { paddingVertical: 8 }]}>Sin alimentos</Text>}
                 {delaComida.length === 0 && items !== null && esHoy && (
@@ -208,14 +218,28 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
                   const trae = ens ? (it.anadidos ?? []).filter(x => !ES_ALINO.has(x.alimento_id)).map(x => porId.get(x.alimento_id)?.nombre.toLowerCase()).filter(Boolean).join(', ') : '';
                   const op = it.comido ? 1 : 0.6;
                   const q = it.cantidad;
+                  const marcando = moviendo?.de === m;
+                  const marcado = !!moviendo?.ids.has(it.id);
+                  const marcar = () => setMoviendo(mv => {
+                    if (!mv) return mv;
+                    const ids = new Set(mv.ids);
+                    if (ids.has(it.id)) ids.delete(it.id); else ids.add(it.id);
+                    return { ...mv, ids };
+                  });
                   return (
                     <View key={it.id} style={s.item}>
+                      {marcando ? (
+                        <Pressable onPress={marcar} style={[s.caja, marcado && { backgroundColor: C.success, borderColor: C.success }]} accessibilityLabel={`Marcar ${f.nombre}`}>
+                          <Text style={s.checkTxt}>{marcado ? '✓' : ''}</Text>
+                        </Pressable>
+                      ) : (
                       <Pressable onPress={() => alternar(it.id)}
                         style={[s.check, { borderColor: it.comido ? C.accent : '#4A4A4E', backgroundColor: it.comido ? C.accent : 'transparent' }]}>
                         <Text style={s.checkTxt}>{it.comido ? '✓' : ''}</Text>
                       </Pressable>
+                      )}
                       {/* Tocar el alimento lo abre para editarlo (medida, añadidos, cambiarlo o quitarlo) */}
-                      <Pressable onPress={() => editar?.(it)} style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      <Pressable onPress={() => (marcando ? marcar() : editar?.({ ...it, fecha: dia }))} style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                       {f.foto_url ? <Image source={{ uri: f.foto_url }} style={s.thumb} /> : <View style={s.thumb} />}
                       <View style={{ flex: 1, minWidth: 0, gap: 2, opacity: op }}>
                         <Text style={[s.b14, { fontSize: 15 }]} numberOfLines={1}>{it.nombre ?? f.nombre}</Text>
@@ -229,7 +253,39 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
                     </View>
                   );
                 })}
-                {delaComida.length > 0 && esHoy && (
+                {moviendo?.de === m && (
+                  <View style={s.mover}>
+                    <View style={s.row}>
+                      <Text style={s.b14}>{moviendo.ids.size === 0 ? 'Marca lo que quieres pasar' : `${moviendo.ids.size} ${moviendo.ids.size === 1 ? 'marcado' : 'marcados'}`}</Text>
+                      <Pressable onPress={() => setMoviendo(mv => mv && { ...mv, ids: new Set(delaComida.map(x => x.id)) })} hitSlop={8}>
+                        <Text style={[s.link, { fontSize: 13 }]}>Marcar todos</Text>
+                      </Pressable>
+                    </View>
+                    <Text style={s.overline}>Pasarlos a</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
+                      {COMIDAS.filter(([c]) => c !== m).map(([c, l]) => (
+                        <Pressable key={c} onPress={() => setMoviendo(mv => mv && { ...mv, a: c })} style={[s.chip, moviendo.a === c && { backgroundColor: C.accent, borderColor: C.accent }]}>
+                          <Text style={[s.chipTxt, moviendo.a === c && { color: C.onAccent }]}>{l}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                    {moviendo.error && <Text style={{ color: C.accentLight, fontSize: 13 }}>{moviendo.error}</Text>}
+                    <Pressable disabled={!moviendo.a || moviendo.ids.size === 0 || pasando}
+                      onPress={async () => {
+                        if (!moviendo.a) return;
+                        setPasando(true);
+                        const e = await moverItems(pr.id, dia, [...moviendo.ids], moviendo.a);
+                        setPasando(false);
+                        if (e) return setMoviendo(mv => mv && { ...mv, error: e });
+                        setMoviendo(null);
+                        recargar();
+                      }}
+                      style={[s.btnMover, (!moviendo.a || moviendo.ids.size === 0) && { opacity: 0.4 }]}>
+                      <Text style={s.btnMoverTxt}>{pasando ? 'Pasando…' : moviendo.a && moviendo.ids.size > 0 ? `Pasar ${moviendo.ids.size} al ${nombreComida(moviendo.a).toLowerCase()}` : 'Pasar'}</Text>
+                    </Pressable>
+                  </View>
+                )}
+                {delaComida.length > 0 && esHoy && moviendo?.de !== m && (
                   <Pressable onPress={() => agregarA(m)} style={{ minHeight: 40, justifyContent: 'center', borderTopWidth: 1, borderTopColor: C.divider }}>
                     <Text style={[s.link, { fontSize: 14 }]}>+ Agregar alimento</Text>
                   </Pressable>
@@ -274,6 +330,12 @@ const s = StyleSheet.create({
   item: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: C.divider },
   check: { width: 28, height: 28, borderRadius: 14, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   checkTxt: { color: C.onAccent, fontSize: 14, fontWeight: '700' },
+  caja: { width: 26, height: 26, borderRadius: 7, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
+  mover: { gap: 10, paddingTop: 12, paddingBottom: 8, borderTopWidth: 1, borderTopColor: C.divider },
+  chip: { minHeight: 36, paddingHorizontal: 14, borderRadius: 18, borderWidth: 1, borderColor: C.border, justifyContent: 'center' },
+  chipTxt: { fontSize: 13.5, fontWeight: '600', color: C.text },
+  btnMover: { minHeight: 48, borderRadius: 14, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' },
+  btnMoverTxt: { fontSize: 15, fontWeight: '700', color: C.onAccent },
   thumb: { width: 44, height: 44, borderRadius: 12, backgroundColor: C.surface2 },
   vacio: { borderWidth: 1, borderStyle: 'dashed', borderColor: C.border, borderRadius: 14, padding: 12, marginTop: 6, marginBottom: 8, alignItems: 'center' },
 });
