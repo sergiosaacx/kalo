@@ -15,7 +15,7 @@ const CON_LECHE = new Set(['cafe', 'te']);
 // Lo que en la casa se prepara con aceite y en Kalo está «al natural»
 const ACEITE = new Set(['arroz-blanco', 'arroz-integral', 'arroz-parbolizado', 'papa-criolla', 'papa-pastusa', 'papa-sabanera', 'yuca', 'arracacha',
   'arepa-maiz-blanco', 'arepa-maiz-amarillo', 'arepa-queso', 'pasta', 'pasta-integral', 'fideos', 'quinua', 'pechuga', 'pollo-sudado', 'bistec', 'lomo-res',
-  'lomo-cerdo', 'punta-anca', 'chuleta-cerdo', 'carne-molida', 'carne-molida-magra', 'tilapia', 'trucha', 'salmon', 'merluza', 'robalo', 'bagre', 'huevo']);
+  'lomo-cerdo', 'carne-cerdo', 'punta-anca', 'chuleta-cerdo', 'carne-molida', 'carne-molida-magra', 'tilapia', 'trucha', 'salmon', 'merluza', 'robalo', 'bagre', 'huevo']);
 // Lo que Kalo ya tiene frito: el aceite viene incluido
 export const FRITOS = new Set(['platano-maduro-frito', 'patacon', 'papa-frita', 'yuca-frita', 'huevo-frito', 'pescado-frito', 'pollo-apanado', 'pollo-frito',
   'chicharron', 'empanada', 'bunuelo', 'huevo-pericos', 'arepa-huevo']);
@@ -33,6 +33,10 @@ export function sugerencias(a: AlimentoDB): Sugerencia[] {
     if (CON_LECHE.has(a.id)) s.push({ alimento_id: 'leche-entera', nombre: 'Leche', unidad: { gramos: 60, una: 'chorrito (¼ taza)', varias: 'chorritos (¼ taza)' }, inicial: 1 });
     return s;
   }
+  if (a.id === 'agua') return [
+    { alimento_id: 'sal', nombre: 'Sal', unidad: { gramos: 0.5, una: 'pizca', varias: 'pizcas' }, inicial: 1 },
+    { alimento_id: 'limon-exprimido', nombre: 'Limón', unidad: { gramos: 30, una: 'limón exprimido', varias: 'limones exprimidos' }, inicial: 1 },
+  ];
   if (ACEITE.has(a.id)) return [
     { alimento_id: 'aceite-girasol', nombre: 'Aceite como en la casa', unidad: CDA(13.6), inicial: 1, casa: true },
     { alimento_id: 'mantequilla', nombre: 'Mantequilla', unidad: CDTA(5), inicial: 1 },

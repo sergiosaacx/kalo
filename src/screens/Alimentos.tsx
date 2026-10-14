@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Boton, Chips, Segmento, u } from '../components/ui';
-import { CATEGORIAS, MINERALES, VITAMINAS, fotoDe, mapaCache, nutrientes, nutrientesItem, sinTildes, useAlimentos, type AlimentoDB, type Anadido } from '../data/alimentos';
+import { CATEGORIAS, MINERALES, VITAMINAS, fotoDe, mapaCache, nutrientes, nutrientesItem, coincide, sinTildes, useAlimentos, type AlimentoDB, type Anadido } from '../data/alimentos';
 import { anadidosParaGuardar, bandeja, kcalBandeja, useBandeja, type AnadidoBandeja, type ItemBandeja } from '../data/bandeja';
 import { guardarOpcion, tiempoTexto, useOpciones, type Opcion } from '../data/opciones';
 import { AlimentoPicker } from '../components/AlimentoPicker';
@@ -53,7 +53,7 @@ export function Alimentos({ destino, onAgregado, registro, abrirBandeja }: {
   const resultados = useMemo(() => {
     if (!lista) return [];
     const q = sinTildes(query.trim());
-    return q ? lista.filter(a => a.busqueda.includes(q)) : lista;
+    return q ? lista.filter(a => coincide(a.busqueda, q)) : lista;
   }, [lista, query]);
 
   const enBandeja = new Set(items.map(it => it.alimento.id));

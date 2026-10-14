@@ -17,7 +17,7 @@ export interface AlimentoDB {
 
 export const CATEGORIAS: Record<string, string> = {
   frutas: 'Frutas', verduras: 'Verduras', carbohidratos: 'Cereales y harinas', proteinas: 'Proteínas',
-  lacteos: 'Lácteos', grasas: 'Grasas y frutos secos', bebidas: 'Bebidas',
+  lacteos: 'Lácteos', grasas: 'Grasas y frutos secos', bebidas: 'Bebidas', condimentos: 'Condimentos',
 };
 
 // Valores diarios de referencia (FDA) para calcular el % de cada vitamina y mineral
@@ -35,6 +35,14 @@ export const FOTOS = 'https://sergiosaacx.github.io/kalo/fotos/';
 export const fotoDe = (a: AlimentoDB) => a.foto_url ?? null;
 
 export const sinTildes = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+// Búsqueda por palabras: «carne de cerdo» o «cerdo carne» encuentran lo que tenga «carne» y «cerdo», en cualquier orden
+const VACIAS = new Set(['de', 'del', 'con', 'la', 'el', 'los', 'las', 'en', 'y', 'a', 'al', 'un', 'una']);
+export function coincide(busqueda: string, q: string) {
+  if (busqueda.includes(q)) return true;
+  const palabras = q.split(/\s+/).filter(w => w && !VACIAS.has(w));
+  return palabras.length > 0 && palabras.every(w => busqueda.includes(w));
+}
 
 // Nutrientes de una cantidad (en porciones base)
 // «Añadidos»: lo que se le pone a un alimento (panela al café, aceite al arroz, lo de un batido)

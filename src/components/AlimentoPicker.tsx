@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { nutrientes, sinTildes, useAlimentos, type AlimentoDB } from '../data/alimentos';
+import { coincide, nutrientes, sinTildes, useAlimentos, type AlimentoDB } from '../data/alimentos';
 import { fmt } from '../logic/energia';
 import { C } from '../theme';
 import { Boton } from './ui';
@@ -12,7 +12,7 @@ export function AlimentoPicker({ titulo, onElegir, onCerrar }: { titulo: string;
   const res = useMemo(() => {
     if (!lista) return [];
     const t = sinTildes(q.trim());
-    return (t ? lista.filter(a => a.busqueda.includes(t)) : lista).slice(0, 40);
+    return (t ? lista.filter(a => coincide(a.busqueda, t)) : lista).slice(0, 40);
   }, [lista, q]);
 
   return (
