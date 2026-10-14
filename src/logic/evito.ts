@@ -19,7 +19,7 @@ export const GRUPOS: Grupo[] = [
   { id: 'pescado', nombre: 'Pescado', tipo: 'alergia', incluye: o(ids('tilapia', 'trucha', 'salmon', 'merluza', 'robalo', 'bagre', 'bocachico', 'pescado-frito', 'sardina'), empieza('atun-')) },
   { id: 'huevo', nombre: 'Huevo', tipo: 'alergia', incluye: o(empieza('huevo'), ids('clara', 'yema', 'arepa-huevo', 'mayonesa', 'torta')) },
   { id: 'leche', nombre: 'Leche', tipo: 'alergia', incluye: o(empieza('queso', 'yogur', 'leche-entera', 'leche-descremada', 'leche-deslactosada', 'leche-semidescremada', 'leche-polvo', 'leche-condensada'),
-    ids('quesillo', 'cuajada', 'kumis', 'kefir', 'crema-leche', 'crema-agria', 'suero-costeno', 'mantequilla', 'arequipe', 'cafe-con-leche', 'chocolate-caliente', 'batido-banano', 'avena-bebida', 'helado', 'almojabana', 'pandebono', 'bunuelo', 'arepa-queso')) },
+    ids('quesillo', 'cuajada', 'kumis', 'kefir', 'crema-leche', 'crema-agria', 'suero-costeno', 'mantequilla', 'arequipe', 'cafe-con-leche', 'chocolate-caliente', 'chocolate-sin-azucar', 'batido-banano', 'avena-bebida', 'helado', 'almojabana', 'pandebono', 'bunuelo', 'arepa-queso')) },
   { id: 'gluten', nombre: 'Gluten', tipo: 'alergia', incluye: o(empieza('pan-', 'pasta', 'galleta-'), ids('fideos', 'harina-trigo', 'tortilla-trigo', 'cuscus', 'cebada', 'mogolla', 'torta', 'cerveza', 'pollo-apanado', 'pollo-frito')) },
   { id: 'nueces', nombre: 'Nueces', tipo: 'alergia', incluye: ids('almendras', 'nueces', 'nuez-brasil', 'avellana', 'macadamia', 'maranon', 'pistacho', 'leche-almendras') },
   // No me lo recomienden
