@@ -45,7 +45,7 @@ export function FilaBarra({ nombre, valor, pct, color, valorColor, tocar }: { no
 }
 
 // «Tu salud hoy»: arriba lo que tiene tope (no pasarse), abajo lo que es meta (llegar)
-export function TarjetaSalud({ d, l, tocar }: { d: Dia; l: Limites; tocar: (c: Clave) => void }) {
+export function TarjetaSalud({ d, l, tocar, titulo = 'Tu salud hoy' }: { d: Dia; l: Limites; tocar: (c: Clave) => void; titulo?: string }) {
   const tope = (c: Clave, nombre: string, v: number, lim: number, unidad: string) => {
     const color = v >= lim ? ROJO : v >= lim * 0.85 ? C.fat : C.accent;
     return <FilaBarra key={c} nombre={nombre} valor={`${f(v)} / ${f(lim)} ${unidad}`} pct={v / lim} color={color} valorColor={v >= lim * 0.85 ? color : undefined} tocar={() => tocar(c)} />;
@@ -55,7 +55,7 @@ export function TarjetaSalud({ d, l, tocar }: { d: Dia; l: Limites; tocar: (c: C
   return (
     <View style={[u.card, { gap: 11 }]}>
       <View style={s.entre}>
-        <Text style={s.tit}>Tu salud hoy</Text>
+        <Text style={s.tit}>{titulo}</Text>
         <Text style={s.toca}>Toca una barra</Text>
       </View>
       <Grupo tipo="tope" texto="Mejor no pasarte" />

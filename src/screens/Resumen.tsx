@@ -165,14 +165,15 @@ function FechaInput({ valor, cambiar, label }: { valor: string; cambiar: (f: str
   );
 }
 
-type Rango = '14' | '30' | 'mes' | 'fechas';
+type Rango = 'dia' | '14' | '30' | 'mes' | 'fechas';
 
 // Cualquier rango: promedio, días en la meta, proteína, cambio de peso y lo que más comió
-export function Personalizado({ onRango }: { onRango?: (desde: string, hasta: string) => void }) {
+// «Un día»: se escoge una fecha y Hoy muestra ese día completo (onDia con la fecha; null al salir de «Un día»)
+export function Personalizado({ onRango, dia, onDia }: { onRango?: (desde: string, hasta: string) => void; dia?: string | null; onDia?: (f: string | null) => void }) {
   const { activo } = useSesion();
   const { lista } = useAlimentos();
   const hoy = hoyISO();
-  const [rango, setRango] = useState<Rango>('30');
+  const [rango, setRango] = useState<Rango>(dia ? 'dia' : '30');
   const [libre, setLibre] = useState({ desde: sumarDias(hoy, -13), hasta: hoy });
   const desde = rango === '14' ? sumarDias(hoy, -13) : rango === '30' ? sumarDias(hoy, -29) : rango === 'mes' ? `${hoy.slice(0, 8)}01` : libre.desde;
   const hasta = rango === 'fechas' ? libre.hasta : hoy;
@@ -181,6 +182,7 @@ export function Personalizado({ onRango }: { onRango?: (desde: string, hasta: st
   const { lista: pesos } = usePesos(activo?.id);
   const porId = useMemo(() => new Map((lista ?? []).map(a => [a.id, a])), [lista]);
   useEffect(() => { onRango?.(desde, hasta); }, [desde, hasta]);
+  useEffect(() => { onDia?.(rango === 'dia' ? (dia ?? sumarDias(hoy, -1)) : null); }, [rango]);
   if (!activo) return null;
   const meta = gasto(activo).objetivo;
 
@@ -220,14 +222,15 @@ export function Personalizado({ onRango }: { onRango?: (desde: string, hasta: st
 
   return (
     <View style={{ gap: 12 }}>
-      <Chips<Rango> opciones={[['14', 'Últimos 14 días'], ['30', 'Últimos 30 días'], ['mes', 'Este mes'], ['fechas', 'Elegir fechas']]} valor={rango} onCambio={setRango} />
+      <Chips<Rango> opciones={[['dia', 'Un día'], ['14', 'Últimos 14 días'], ['30', 'Últimos 30 días'], ['mes', 'Este mes'], ['fechas', 'Elegir fechas']]} valor={rango} onCambio={setRango} />
+      {rango === 'dia' && dia && <FechaInput label="Día" valor={dia} cambiar={f => onDia?.(f)} />}
       {rango === 'fechas' && (
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <FechaInput label="Desde" valor={libre.desde} cambiar={f => setLibre(x => ({ desde: f, hasta: f > x.hasta ? f : x.hasta }))} />
           <FechaInput label="Hasta" valor={libre.hasta} cambiar={f => setLibre(x => ({ hasta: f, desde: f < x.desde ? f : x.desde }))} />
         </View>
       )}
-      {cuerpo()}
+      {rango !== 'dia' && cuerpo()}
     </View>
   );
 }

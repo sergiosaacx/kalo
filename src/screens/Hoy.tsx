@@ -32,8 +32,12 @@ function sumar(items: ItemPlan[], porId: Map<string, AlimentoDB>, soloComido: bo
 export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: string) => void; agregarA: (c: ComidaId) => void; verRestante?: () => void; editar?: (it: ItemPlan) => void; aviso?: string | null }) {
   const [rango, setRango] = useState<string>('hoy');
   // El día que se ve (hoy, o uno anterior tocado en «Semana») y el rango de «Personalizado» para el encabezado
-  const [dia, setDia] = useState(hoyISO());
+  const [diaHoy, setDia] = useState(hoyISO());
   const [rangoP, setRangoP] = useState<[string, string] | null>(null);
+  // «Personalizado › Un día»: el día escogido se ve completo, igual que hoy
+  const [diaP, setDiaP] = useState<string | null>(null);
+  const unDia = rango === 'custom' && !!diaP;
+  const dia = unDia ? diaP! : diaHoy;
   const [avisosAbiertos, setAvisosAbiertos] = useState(false);
   const [notifs, setNotifs] = useState<Notificacion[]>([]);
   const [explica, setExplica] = useState<Clave | null>(null);
@@ -61,10 +65,13 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
   const [aa, mm, dd] = dia.split('-').map(Number);
   const d = new Date(aa, mm - 1, dd);
   const fecha = rango === 'semana' ? rangoTxt(lunesDe(hoyISO()), sumarDias(lunesDe(hoyISO()), 6))
-    : rango === 'custom' ? (rangoP ? rangoTxt(rangoP[0], rangoP[1]) : '')
+    : rango === 'custom' && !unDia ? (rangoP ? rangoTxt(rangoP[0], rangoP[1]) : '')
       : `${DIAS[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]}`;
 
-  const msg = todos.length === 0
+  const msg = !esHoy
+    ? (todos.length === 0 ? 'No anotaste nada ese día.'
+      : rem > 0 ? `Ese día te faltaron ${fmt(rem)} kcal para tu meta.` : pr.meta === 'subir' ? 'Ese día cumpliste tu meta.' : `Ese día te pasaste ${fmt(-rem)} kcal de tu meta.`)
+    : todos.length === 0
     ? `Hola, ${pr.nombre}. Hoy te tocan ${fmt(tgt)} kcal. Agrega lo que comas y marca el círculo cuando lo comas.`
     : pr.meta === 'bajar'
       ? (rem >= 0 ? `Vas muy bien, ${pr.nombre}. Te quedan ${fmt(rem)} kcal y sigues en déficit.` : `Te pasaste ${fmt(-rem)} kcal. Una caminata de 30 minutos ayuda a equilibrar.`)
@@ -73,7 +80,7 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
         : (rem > 0 ? `Te quedan ${fmt(rem)} kcal para mantenerte en equilibrio.` : `Llevas ${fmt(-rem)} kcal sobre tu equilibrio de hoy.`);
 
   const kpis = [
-    { label: rem >= 0 ? 'Restante' : 'Exceso', value: fmt(Math.abs(rem)), color: C.accent },
+    { label: rem >= 0 ? (esHoy ? 'Restante' : 'Faltó') : 'Exceso', value: fmt(Math.abs(rem)), color: C.accent },
     { label: 'Gasto', value: fmt(en.total), color: C.text },
     { label: 'Balance', value: conSigno(hoy.k - en.total), color: C.text },
   ];
@@ -119,9 +126,10 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
 
       {rango === 'semana' ? (
         <Semana onDia={f => { setDia(f); setRango('hoy'); }} />
-      ) : rango === 'custom' ? (
-        <Personalizado onRango={(a, b) => setRangoP([a, b])} />
-      ) : (
+      ) : rango === 'custom' && (
+        <Personalizado onRango={(a, b) => setRangoP([a, b])} dia={diaP} onDia={setDiaP} />
+      )}
+      {(rango === 'hoy' || unDia) && (
         <>
           <View style={[s.card, { borderRadius: 24, paddingVertical: 22, alignItems: 'center', gap: 18 }]}>
             <Anillo progreso={hoy.k / tgt}>
@@ -149,7 +157,7 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
 
           <TarjetaAgua key={dia} fecha={dia} editable={esHoy} />
 
-          <TarjetaSalud d={salud} l={limites} tocar={setExplica} />
+          <TarjetaSalud d={salud} l={limites} tocar={setExplica} titulo={esHoy ? 'Tu salud hoy' : 'Tu salud ese día'} />
 
           <View style={[s.card, { gap: 14 }]}>
             <Text style={[s.overline, { fontSize: 12 }]}>Macronutrientes</Text>
@@ -161,7 +169,7 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
 
           <Pressable onPress={() => irA('gasto')} style={[s.card, s.row, { borderWidth: 1, borderColor: C.surface3, paddingVertical: 16 }]}>
             <View style={{ gap: 3 }}>
-              <Text style={s.muted13}>Tu cuerpo usa hoy</Text>
+              <Text style={s.muted13}>{esHoy ? 'Tu cuerpo usa hoy' : 'Tu cuerpo usa al día'}</Text>
               <Text style={s.h22}>{fmt(en.total)} kcal</Text>
               <Text style={s.muted13}>Según tus hábitos diarios</Text>
             </View>
@@ -169,7 +177,7 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
           </Pressable>
 
           <View style={[s.row, { paddingTop: 6, paddingHorizontal: 2, alignItems: 'baseline' }]}>
-            <Text style={[s.h22, { fontSize: 20 }]}>Comidas de hoy</Text>
+            <Text style={[s.h22, { fontSize: 20 }]}>{esHoy ? 'Comidas de hoy' : 'Comidas del día'}</Text>
             <Pressable onPress={() => irA('menu')} style={{ minHeight: 44, justifyContent: 'center' }}>
               <Text style={s.link}>Ver menú</Text>
             </Pressable>
