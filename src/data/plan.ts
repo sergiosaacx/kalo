@@ -19,7 +19,7 @@ export function comidaDeAhora(d = new Date()): ComidaId {
 export const hoyISO = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-export interface ItemPlan { id: string; alimento_id: string; cantidad: number; comido: boolean; comida: ComidaId; anadidos?: Anadido[] | null }
+export interface ItemPlan { id: string; alimento_id: string; cantidad: number; comido: boolean; comida: ComidaId; anadidos?: Anadido[] | null; nombre?: string | null }
 
 // Plan de un día para un perfil: ítems por comida, con cambios guardados al instante
 export function usePlanDia(perfilId: string | undefined, fecha = hoyISO()) {
@@ -29,7 +29,7 @@ export function usePlanDia(perfilId: string | undefined, fecha = hoyISO()) {
   const cargar = useCallback(async () => {
     if (!perfilId) return;
     const { data } = await supabase.from('plan')
-      .select('comida, nombre, plan_items(id, alimento_id, cantidad, comido, orden, anadidos)')
+      .select('comida, nombre, plan_items(id, alimento_id, cantidad, comido, orden, anadidos, nombre)')
       .eq('perfil_id', perfilId).eq('fecha', fecha);
     const lista: ItemPlan[] = [];
     const n: Partial<Record<ComidaId, string>> = {};
@@ -59,14 +59,14 @@ export function usePlanDia(perfilId: string | undefined, fecha = hoyISO()) {
 
 // Agrega varios alimentos juntos a una comida del día (lo que había en la bandeja)
 // comido: lo que se anota respondiendo «¿Ya desayunaste?» queda marcado como comido
-export async function agregarVariosAlPlan(perfilId: string, comida: ComidaId, lista: { alimento_id: string; cantidad: number; anadidos?: Anadido[] | null }[], fecha = hoyISO(), comido = false) {
+export async function agregarVariosAlPlan(perfilId: string, comida: ComidaId, lista: { alimento_id: string; cantidad: number; anadidos?: Anadido[] | null; nombre?: string | null }[], fecha = hoyISO(), comido = false) {
   const { data: plan, error } = await supabase.from('plan')
     .upsert({ perfil_id: perfilId, fecha, comida }, { onConflict: 'perfil_id,fecha,comida' })
     .select('id').single();
   if (error || !plan) return 'No pudimos agregarlos. Revisa tu conexión e inténtalo de nuevo.';
   const base = Date.now() % 100000;
   const { error: e2 } = await supabase.from('plan_items')
-    .insert(lista.map((it, k) => ({ plan_id: plan.id, alimento_id: it.alimento_id, cantidad: it.cantidad, anadidos: it.anadidos?.length ? it.anadidos : null, orden: base + k, comido, comido_en: comido ? new Date().toISOString() : null })));
+    .insert(lista.map((it, k) => ({ plan_id: plan.id, alimento_id: it.alimento_id, cantidad: it.cantidad, anadidos: it.anadidos?.length ? it.anadidos : null, nombre: it.nombre ?? null, orden: base + k, comido, comido_en: comido ? new Date().toISOString() : null })));
   return e2 ? 'No pudimos agregarlos. Inténtalo de nuevo.' : null;
 }
 
@@ -92,7 +92,7 @@ export async function frecuenciaComidas(perfilId: string, dias = 30) {
 }
 
 // Editar lo que ya está anotado: otro alimento, otra cantidad u otros añadidos (sin borrar y crear de nuevo)
-export async function editarItem(id: string, cambios: { alimento_id: string; cantidad: number; anadidos: Anadido[] | null }) {
+export async function editarItem(id: string, cambios: { alimento_id: string; cantidad: number; anadidos: Anadido[] | null; nombre?: string | null }) {
   const { error } = await supabase.from('plan_items').update(cambios).eq('id', id);
   return error ? 'No pudimos guardar el cambio. Revisa tu conexión e inténtalo de nuevo.' : null;
 }

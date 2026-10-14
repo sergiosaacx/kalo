@@ -18,6 +18,8 @@ import { C } from '../theme';
 
 const fq = (n: number) => (Math.round(n * 10) / 10).toLocaleString('es-CO');
 
+import { ArmarEnsalada, ENSALADA_ID } from '../components/Ensalada';
+
 export function Miniatura({ a, size }: { a: AlimentoDB; size: number }) {
   const uri = fotoDe(a);
   return uri
@@ -45,6 +47,8 @@ export function Alimentos({ destino, onAgregado, registro, abrirBandeja }: {
   // «Mis opciones»: una opción completa entra a la bandeja de una vez
   const [vista, setVista] = useState<'alimentos' | 'opciones'>('alimentos');
   const [opcion, setOpcion] = useState<Opcion | null>(null);
+  // «Ensalada a tu gusto» abierta: nueva, o una guardada para usarla otra vez
+  const [armando, setArmando] = useState<{ opcion?: Opcion } | null>(null);
   const { lista: opciones, recargar: recargarOpciones } = useOpciones();
   const porId = useMemo(() => new Map((lista ?? []).map(a => [a.id, a])), [lista]);
   // Lo ya comido ese día, para avisar si lo de la bandeja hace pasar un límite (azúcar libre, sodio, grasa saturada)
@@ -61,8 +65,11 @@ export function Alimentos({ destino, onAgregado, registro, abrirBandeja }: {
   // Tus opciones guardadas también salen al buscar (p. ej. «Mi batido»)
   const misOpciones = useMemo(() => {
     const q = sinTildes(query.trim());
-    return q && opciones ? opciones.filter(o => o.fuente !== 'kalo' && o.items.length > 0 && sinTildes(o.nombre).includes(q)) : [];
+    return q && opciones ? opciones.filter(o => o.fuente !== 'kalo' && o.items.length > 0 && !esEnsalada(o) && sinTildes(o.nombre).includes(q)) : [];
   }, [opciones, query]);
+  // Tus ensaladas guardadas: salen al buscar «ensalada»
+  const ensaladas = useMemo(() => (opciones ?? []).filter(esEnsalada), [opciones]);
+  const verEnsaladas = sinTildes(query.trim()).length >= 3 && 'ensalada'.startsWith(sinTildes(query.trim()).split(/\s+/)[0]);
   const nombre = nombreComida(comida).toLowerCase();
 
   const agregar = () => {
@@ -81,7 +88,7 @@ export function Alimentos({ destino, onAgregado, registro, abrirBandeja }: {
     if (!activo || items.length === 0) return;
     setGuardando(true);
     setErrorListo(null);
-    const e = await agregarVariosAlPlan(activo.id, comida, items.map(it => ({ alimento_id: it.alimento.id, cantidad: it.cantidad, anadidos: anadidosParaGuardar(it) })), registro?.fecha ?? hoyISO(), !!registro);
+    const e = await agregarVariosAlPlan(activo.id, comida, items.map(it => ({ alimento_id: it.alimento.id, cantidad: it.cantidad, anadidos: anadidosParaGuardar(it), nombre: it.nombre ?? null })), registro?.fecha ?? hoyISO(), !!registro);
     setGuardando(false);
     if (e) { setErrorListo(e); return; }
     if (registro) await responder(activo.id, registro.fecha, registro.momento, 'respondido');
@@ -94,7 +101,21 @@ export function Alimentos({ destino, onAgregado, registro, abrirBandeja }: {
   return (
     <View style={{ flex: 1 }}>
       <ScrollView key={abierto?.id ?? 'lista'} style={{ flex: 1 }} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
-        {abierto ? <Ficha a={abierto} perfilId={activo?.id} volver={() => setAbierto(null)} onMedida={setElegido} /> : (
+        {armando && porId.has(ENSALADA_ID) ? (
+          <ArmarEnsalada porId={porId} inicial={armando.opcion ? { nombre: armando.opcion.nombre, anadidos: armando.opcion.items[0]?.anadidos } : null}
+            titulo="Ensalada a tu gusto" botonTxt={`Agregar al ${nombre}`} etiquetaNombre="Guardarla como… (si le pones nombre, la próxima vez es un toque)"
+            volver={() => setArmando(null)}
+            onListo={r => {
+              const it: ItemBandeja = { alimento: porId.get(ENSALADA_ID)!, cantidad: 1, texto: r.resumen, anadidos: r.anadidos, nombre: r.nombre || 'Ensalada' };
+              bandeja.agregar(it);
+              if (r.nombre) {
+                const misma = armando.opcion && armando.opcion.nombre === r.nombre ? armando.opcion.id : undefined;
+                guardarOpcion({ id: misma, comida, nombre: r.nombre, items: [{ alimento_id: ENSALADA_ID, cantidad: 1, anadidos: anadidosParaGuardar(it) }], tiempo_min: null, dificultad: null })
+                  .then(() => recargarOpciones());
+              }
+              setArmando(null);
+            }} />
+        ) : abierto ? <Ficha a={abierto} perfilId={activo?.id} volver={() => setAbierto(null)} onMedida={setElegido} /> : (
           <View style={{ gap: 14 }}>
             <View style={{ gap: 2, paddingTop: 4 }}>
               <Text style={s.muted13}>{destino || items.length > 0 ? `Agregando a ${nombre} de hoy` : lista ? `${lista.length} alimentos` : 'Cargando…'}</Text>
@@ -106,6 +127,32 @@ export function Alimentos({ destino, onAgregado, registro, abrirBandeja }: {
             <TextInput
               value={query} onChangeText={setQuery} placeholder="Busca un alimento: arepa, lulo, pollo…"
               placeholderTextColor={C.muted} style={s.input} autoCorrect={false} />
+            {verEnsaladas && porId.has(ENSALADA_ID) && (
+              <View style={[s.card, { paddingVertical: 4 }]}>
+                <Text style={[s.muted12, { paddingTop: 8 }]}>Tus ensaladas</Text>
+                {ensaladas.map(o => {
+                  const its = itemsDe(o, porId);
+                  const partes = (o.items[0]?.anadidos ?? []).map(x => porId.get(x.alimento_id)?.nombre.toLowerCase()).filter(Boolean);
+                  return (
+                    <Pressable key={o.id} onPress={() => setArmando({ opcion: o })} style={[s.row, s.rowBorde]}>
+                      <Miniatura a={porId.get(ENSALADA_ID)!} size={56} />
+                      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                        <Text style={s.b15} numberOfLines={1}>{o.nombre}</Text>
+                        <Text style={s.muted12} numberOfLines={2}>{partes.join(', ')}</Text>
+                      </View>
+                      <Text style={s.kcal}>{fmt(kcalDe(its))}</Text>
+                    </Pressable>
+                  );
+                })}
+                <Pressable onPress={() => setArmando({})} style={[s.row, s.rowBorde]}>
+                  <Miniatura a={porId.get(ENSALADA_ID)!} size={56} />
+                  <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                    <Text style={[s.b15, { color: C.accent }]} numberOfLines={1}>+ Ensalada a tu gusto</Text>
+                    <Text style={s.muted12} numberOfLines={1}>Ármala con lo que trae</Text>
+                  </View>
+                </Pressable>
+              </View>
+            )}
             {misOpciones.length > 0 && (
               <View style={[s.card, { paddingVertical: 4 }]}>
                 <Text style={[s.muted12, { paddingTop: 8 }]}>Tus opciones</Text>
@@ -130,18 +177,25 @@ export function Alimentos({ destino, onAgregado, registro, abrirBandeja }: {
               <Text style={s.soft}>No encontramos «{query}». Prueba con otro nombre.</Text>
             ) : (
               <View style={s.card}>
-                {resultados.slice(0, 80).map((a, i) => {
+                {resultados.filter(a => !(verEnsaladas && a.id === ENSALADA_ID)).slice(0, 80).map((a, i) => {
                   const n = nutrientes(a, 1);
                   return (
-                    <Pressable key={a.id} onPress={() => setAbierto(a)} style={[s.row, i > 0 && s.rowBorde]}>
+                    <Pressable key={a.id} onPress={() => (a.id === ENSALADA_ID ? setArmando({}) : setAbierto(a))} style={[s.row, i > 0 && s.rowBorde]}>
                       <Miniatura a={a} size={56} />
+                      {a.id === ENSALADA_ID ? (
+                        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                          <Text style={s.b15} numberOfLines={1}>{a.nombre}</Text>
+                          <Text style={s.muted12} numberOfLines={1}>Ármala con lo que trae</Text>
+                        </View>
+                      ) : (
                       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                         <Text style={s.b15} numberOfLines={1}>{a.nombre}</Text>
                         <Text style={s.muted12} numberOfLines={1}>{a.porcion_base.texto} · {fmt(a.porcion_base.gramos)} g</Text>
                         <Text style={s.muted12}>P {fq(n.p)} · C {fq(n.c)} · G {fq(n.gr)}</Text>
                         <Sellos a={a} mini />
                       </View>
-                      {enBandeja.has(a.id) ? <Text style={s.ya}>En la bandeja</Text> : <Text style={s.kcal}>{fmt(n.kcal)}</Text>}
+                      )}
+                      {a.id === ENSALADA_ID ? null : enBandeja.has(a.id) ? <Text style={s.ya}>En la bandeja</Text> : <Text style={s.kcal}>{fmt(n.kcal)}</Text>}
                     </Pressable>
                   );
                 })}
@@ -156,7 +210,7 @@ export function Alimentos({ destino, onAgregado, registro, abrirBandeja }: {
                     <View key={i} style={[s.row, i > 0 && s.rowBorde]}>
                       <Miniatura a={it.alimento} size={46} />
                       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                        <Text style={s.b15} numberOfLines={1}>{it.alimento.nombre}</Text>
+                        <Text style={s.b15} numberOfLines={1}>{it.nombre ?? it.alimento.nombre}</Text>
                         <Text style={s.muted12} numberOfLines={1}>{it.texto}</Text>
                       </View>
                       <Text style={s.ya}>En la bandeja</Text>
@@ -170,7 +224,7 @@ export function Alimentos({ destino, onAgregado, registro, abrirBandeja }: {
         )}
       </ScrollView>
 
-      {(abierto || items.length > 0) && (
+      {!armando && (abierto || items.length > 0) && (
         <Pressable onPress={() => items.length > 0 && setHoja(true)} style={s.bandeja}>
           <View style={s.bandejaIn}>
             {items.length > 0 && (
@@ -212,7 +266,7 @@ export function Alimentos({ destino, onAgregado, registro, abrirBandeja }: {
                 <View key={i} style={[s.row, i > 0 && s.rowBorde]}>
                   <Miniatura a={it.alimento} size={46} />
                   <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                    <Text style={s.b15} numberOfLines={1}>{it.alimento.nombre}</Text>
+                    <Text style={s.b15} numberOfLines={1}>{it.nombre ?? it.alimento.nombre}</Text>
                     <Text style={s.muted12} numberOfLines={1}>{it.texto}{FRITOS.has(it.alimento.id) ? ' · ya incluye el aceite' : ''}</Text>
                     {[it.alimento, ...(it.anadidos ?? []).map(x => x.alimento)].some(x => choques(x, activo?.evito).alergia.length > 0) && <Text style={s.alergiaTxt}>Alergia</Text>}
                     {(it.anadidos ?? []).map((x, k) => (
@@ -259,9 +313,44 @@ export const itemsDe = (o: Opcion, porId: Map<string, AlimentoDB>): ItemBandeja[
     const a = porId.get(i.alimento_id)!;
     const anadidos = (i.anadidos ?? []).filter(x => porId.has(x.alimento_id))
       .map(x => { const b = porId.get(x.alimento_id)!; return { alimento: b, cantidad: x.cantidad, texto: `${fmt(b.porcion_base.gramos * x.cantidad)} g` }; });
-    return { alimento: a, cantidad: i.cantidad, texto: textoCantidad(a, i.cantidad), anadidos };
+    return { alimento: a, cantidad: i.cantidad, texto: textoCantidad(a, i.cantidad), anadidos, nombre: a.id === ENSALADA_ID ? o.nombre : undefined };
   });
 export const kcalDe = (its: ItemBandeja[]) => its.reduce((t, it) => t + kcalBandeja(it), 0);
+// Una ensalada guardada: una opción propia con un solo ítem «ensalada»
+const esEnsalada = (o: Opcion) => o.fuente !== 'kalo' && o.items.length === 1 && o.items[0].alimento_id === ENSALADA_ID;
+
+// Editar desde Hoy una ensalada ya anotada: se abre armada, igual que al crearla
+function EditarEnsalada({ it, cerrar }: { it: ItemPlan; cerrar: (cambio: boolean) => void }) {
+  const { lista } = useAlimentos();
+  const [ocupado, setOcupado] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const porId = useMemo(() => new Map((lista ?? []).map(a => [a.id, a])), [lista]);
+  if (!lista) return <ActivityIndicator color={C.accent} style={{ marginTop: 40 }} />;
+  const comida = nombreComida(it.comida).toLowerCase();
+  return (
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+      <ArmarEnsalada porId={porId} inicial={{ nombre: it.nombre, anadidos: it.anadidos }} titulo={it.nombre ?? 'Ensalada'} botonTxt="Guardar cambios" etiquetaNombre="Nombre"
+        ocupado={ocupado} volver={() => cerrar(false)}
+        onListo={async r => {
+          setOcupado(true);
+          const e = await editarItem(it.id, { alimento_id: ENSALADA_ID, cantidad: 1, anadidos: r.anadidos.map(x => ({ alimento_id: x.alimento.id, cantidad: x.cantidad })), nombre: r.nombre || 'Ensalada' });
+          setOcupado(false);
+          if (e) setError(e); else cerrar(true);
+        }}
+        extra={(
+          <>
+            {error && <Text style={u.error}>{error}</Text>}
+            <Boton texto={`Quitar del ${comida}`} tipo="borde" onPress={async () => {
+              setOcupado(true);
+              const e = await quitarItem(it.id);
+              setOcupado(false);
+              if (e) setError(e); else cerrar(true);
+            }} />
+          </>
+        )} />
+    </ScrollView>
+  );
+}
 
 // Editar desde Hoy algo ya anotado: cambiar medida y añadidos, cambiarlo por otro alimento o quitarlo
 export function EditarItem({ it, cerrar }: { it: ItemPlan; cerrar: (cambio: boolean) => void }) {
@@ -274,6 +363,7 @@ export function EditarItem({ it, cerrar }: { it: ItemPlan; cerrar: (cambio: bool
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => { if (lista && !a) setA(lista.find(x => x.id === it.alimento_id) ?? null); }, [lista]);
+  if (it.alimento_id === ENSALADA_ID) return <EditarEnsalada it={it} cerrar={cerrar} />;
   if (!a) return <ActivityIndicator color={C.accent} style={{ marginTop: 40 }} />;
   const comida = nombreComida(it.comida).toLowerCase();
 

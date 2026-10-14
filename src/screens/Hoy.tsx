@@ -8,6 +8,7 @@ import { TarjetaAgua } from '../components/Agua';
 import { Campanita, Desplegable, FilaBarra, Grupo, HojaBarra, TarjetaSalud, type Clave } from '../components/SaludHoy';
 import { notificacionesDeHoy, type Notificacion } from '../data/comidas';
 import { Avatar } from '../components/Avatar';
+import { ENSALADA_ID, ES_ALINO } from '../components/Ensalada';
 import { avisosDelDia, limitesDe, saludDelDia } from '../logic/salud';
 import { sumarDias } from '../logic/peso';
 import { useSesion } from '../data/sesion';
@@ -201,7 +202,10 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
                   const f = porId.get(it.alimento_id);
                   if (!f) return null;
                   const n = nutrientesItem(it, porId);
-                  const ad = (it.anadidos ?? []).map(x => porId.get(x.alimento_id)?.nombre.toLowerCase()).filter(Boolean);
+                  // La ensalada: debajo lo que trae, y en amarillo solo el aliño
+                  const ens = f.id === ENSALADA_ID;
+                  const ad = (it.anadidos ?? []).filter(x => !ens || ES_ALINO.has(x.alimento_id)).map(x => porId.get(x.alimento_id)?.nombre.toLowerCase()).filter(Boolean);
+                  const trae = ens ? (it.anadidos ?? []).filter(x => !ES_ALINO.has(x.alimento_id)).map(x => porId.get(x.alimento_id)?.nombre.toLowerCase()).filter(Boolean).join(', ') : '';
                   const op = it.comido ? 1 : 0.6;
                   const q = it.cantidad;
                   return (
@@ -214,9 +218,9 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
                       <Pressable onPress={() => editar?.(it)} style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                       {f.foto_url ? <Image source={{ uri: f.foto_url }} style={s.thumb} /> : <View style={s.thumb} />}
                       <View style={{ flex: 1, minWidth: 0, gap: 2, opacity: op }}>
-                        <Text style={[s.b14, { fontSize: 15 }]} numberOfLines={1}>{f.nombre}</Text>
+                        <Text style={[s.b14, { fontSize: 15 }]} numberOfLines={1}>{it.nombre ?? f.nombre}</Text>
                         <Text style={[s.muted13, { fontSize: 12 }]} numberOfLines={1}>
-                          {q === 1 ? f.porcion_base.texto : `${q.toLocaleString('es-CO')} × ${f.porcion_base.texto}`}
+                          {ens ? trae : q === 1 ? f.porcion_base.texto : `${q.toLocaleString('es-CO')} × ${f.porcion_base.texto}`}
                         </Text>
                         {ad.length > 0 && <Text style={[s.muted13, { fontSize: 12, color: C.fat }]} numberOfLines={1}>+ {ad.join(', ')}</Text>}
                       </View>

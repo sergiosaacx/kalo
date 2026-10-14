@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { nutrientes, type AlimentoDB } from './alimentos';
 
 export interface AnadidoBandeja { alimento: AlimentoDB; cantidad: number; texto: string }
-export interface ItemBandeja { alimento: AlimentoDB; cantidad: number; texto: string; anadidos?: AnadidoBandeja[] }
+export interface ItemBandeja { alimento: AlimentoDB; cantidad: number; texto: string; anadidos?: AnadidoBandeja[]; nombre?: string | null } // nombre: «Ensalada de la casa»
 
 // Calorías de un ítem de la bandeja con sus añadidos
 export const kcalBandeja = (it: ItemBandeja) =>
@@ -19,7 +19,7 @@ const oyentes = new Set<() => void>();
 const avisar = () => oyentes.forEach(f => f());
 
 export const bandeja = {
-  agregar(it: ItemBandeja) { items = [...items, it]; ultimo = { texto: `${it.alimento.nombre} · ${it.texto} en la bandeja`, en: Date.now() }; avisar(); },
+  agregar(it: ItemBandeja) { items = [...items, it]; ultimo = { texto: `${it.nombre ?? it.alimento.nombre} · ${it.texto} en la bandeja`, en: Date.now() }; avisar(); },
   // Una opción completa: todos sus alimentos de una vez
   agregarVarios(lista: ItemBandeja[], aviso: string) { items = [...items, ...lista]; ultimo = { texto: aviso, en: Date.now() }; avisar(); },
   quitar(k: number) { items = items.filter((_, j) => j !== k); ultimo = null; avisar(); },
