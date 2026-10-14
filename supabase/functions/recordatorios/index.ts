@@ -213,7 +213,8 @@ async function avisoExceso(fecha: string, ahora: number, ahoraISO: string) {
       const add = (c: Cosa, val: number) => { if (val > 0) suma[c].set(a.nombre, (suma[c].get(a.nombre) ?? 0) + val); };
       add('sodio', v('sodio_mg'));
       add('grasaSat', v('grasa_sat_g'));
-      if (azucarLibre(a.id)) add('azucar', v('azucar_g'));
+      // Igual que la app: las preparaciones traen su azúcar libre; si no, cuenta todo el azúcar de lo que es libre
+      add('azucar', a.por_100g?.azucar_libre_g !== undefined ? v('azucar_libre_g') : azucarLibre(a.id) ? v('azucar_g') : 0);
     }
     // Sin la meta de calorías (no ha abierto Kalo desde este cambio) solo se revisa el sodio, que es fijo
     const kcal = p.objetivo_kcal;

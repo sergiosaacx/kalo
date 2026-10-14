@@ -47,7 +47,7 @@
   { "id": "avena-bebida", "nombre": "Avena colombiana", "sinonimos": ["avena en leche"], "categoria": "bebidas",
     "ingredientes": { "leche-entera": 200, "avena-hojuelas": 30, "azucar": 15 }, "rinde_g": 245, "porciones": [{ "texto": "1 vaso", "gramos": 250 }] },
   { "id": "batido-banano", "nombre": "Batido de banano con leche", "sinonimos": [], "categoria": "bebidas",
-    "ingredientes": { "leche-entera": 200, "banano": 118, "azucar": 5 }, "rinde_g": 323, "porciones": [{ "texto": "1 vaso", "gramos": 300 }] },
+    "ingredientes": { "leche-entera": 200, "banano": 118 }, "rinde_g": 318, "porciones": [{ "texto": "1 vaso", "gramos": 300 }] },
   { "id": "colada", "nombre": "Colada de maizena", "sinonimos": [], "categoria": "bebidas",
     "ingredientes": { "leche-entera": 200, "fecula-maiz": 20, "azucar": 15 }, "rinde_g": 235, "porciones": [{ "texto": "1 taza", "gramos": 235 }] },
   { "id": "gaseosa-cero", "nombre": "Gaseosa sin azúcar", "sinonimos": [], "categoria": "bebidas",

@@ -10,11 +10,11 @@ const CDA = (g: number): Unidad => ({ gramos: g, una: 'cucharada', varias: 'cuch
 
 // Bebidas que se endulzan
 const DULCE = new Set(['cafe', 'cafe-con-leche', 'te', 'chocolate-agua', 'chocolate-caliente', 'jugo-lulo-agua', 'jugo-maracuya-agua',
-  'jugo-mora-agua', 'jugo-naranja', 'limonada', 'limonada-coco', 'avena-bebida', 'colada', 'avena-cocida']);
+  'jugo-mora-agua', 'jugo-naranja', 'limonada', 'limonada-coco', 'avena-bebida', 'colada', 'avena-cocida', 'batido-banano']);
 const CON_LECHE = new Set(['cafe', 'te']);
 // Lo que en la casa se prepara con aceite y en Kalo está «al natural»
 const ACEITE = new Set(['arroz-blanco', 'arroz-integral', 'arroz-parbolizado', 'papa-criolla', 'papa-pastusa', 'papa-sabanera', 'yuca', 'arracacha',
-  'arepa-maiz-blanco', 'arepa-maiz-amarillo', 'arepa-queso', 'pasta', 'pasta-integral', 'fideos', 'quinua', 'pechuga', 'pollo-sudado', 'bistec', 'lomo-res',
+  'arepa-maiz-blanco', 'arepa-maiz-amarillo', 'arepa-queso', 'pasta', 'pasta-integral', 'fideos', 'quinua', 'pechuga', 'pollo-sudado', 'huevos-revueltos', 'bistec', 'lomo-res',
   'lomo-cerdo', 'carne-cerdo', 'punta-anca', 'chuleta-cerdo', 'carne-molida', 'carne-molida-magra', 'tilapia', 'trucha', 'salmon', 'merluza', 'robalo', 'bagre', 'huevo']);
 // Lo que Kalo ya tiene frito: el aceite viene incluido
 export const FRITOS = new Set(['platano-maduro-frito', 'patacon', 'papa-frita', 'yuca-frita', 'huevo-frito', 'pescado-frito', 'pollo-apanado', 'pollo-frito',
@@ -39,6 +39,7 @@ export function sugerencias(a: AlimentoDB): Sugerencia[] {
   ];
   if (ACEITE.has(a.id)) return [
     { alimento_id: 'aceite-girasol', nombre: 'Aceite como en la casa', unidad: CDA(13.6), inicial: 1, casa: true },
+    { alimento_id: 'aceite-oliva', nombre: 'Aceite de oliva', unidad: CDTA(4.5), inicial: 1 },
     { alimento_id: 'mantequilla', nombre: 'Mantequilla', unidad: CDTA(5), inicial: 1 },
     { alimento_id: 'hogao', nombre: 'Hogao', unidad: CDA(15), inicial: 2 },
   ];

@@ -3,7 +3,7 @@
 import { nutrientes, type AlimentoDB, type Anadido } from '../data/alimentos';
 
 // Los sellos no aplican a lo natural o mínimamente procesado (como dice la norma)
-const NATURALES = new Set(['huevo', 'huevo-cocido', 'huevo-codorniz', 'clara', 'yema', 'leche-entera', 'leche-descremada', 'leche-semidescremada', 'leche-deslactosada',
+const NATURALES = new Set(['huevo', 'huevos-revueltos', 'huevo-cocido', 'huevo-codorniz', 'clara', 'yema', 'leche-entera', 'leche-descremada', 'leche-semidescremada', 'leche-deslactosada',
   'yogur-natural', 'agua', 'agua-coco', 'cafe', 'te', 'aguacate', 'aguacate-hass', 'pechuga', 'pechuga-cocida', 'pechuga-cruda', 'muslo-pollo', 'contramuslo', 'alas-pollo',
   'lomo-res', 'lomo-cerdo', 'punta-anca', 'bistec', 'carne-molida', 'carne-molida-magra', 'costilla-res', 'costilla-cerdo', 'chuleta-cerdo', 'sobrebarriga', 'lengua',
   'higado-pollo', 'higado-res', 'conejo', 'cordero', 'pato', 'pavo', 'cuy', 'salmon', 'tilapia', 'trucha', 'merluza', 'robalo', 'bagre', 'bocachico', 'camaron', 'calamar',
@@ -16,6 +16,8 @@ const LIBRES = new Set(['azucar', 'panela', 'miel', 'aguapanela', 'bocadillo', '
   'pan-dulce', 'limonada', 'limonada-coco', 'chocolate-mesa', 'chocolate-agua', 'chocolate-caliente', 'cereal-arroz', 'corn-flakes', 'granola', 'galleta-integral',
   'yogur-fruta', 'batido-banano', 'avena-bebida', 'colada', 'mazamorra']);
 export const azucarLibre = (a: AlimentoDB) => LIBRES.has(a.id) || a.id.startsWith('jugo-');
+// Azúcar libre por 100 g: las preparaciones traen la suya (solo el azúcar o la panela que se les agrega, no la de la leche ni la fruta)
+export const azucarLibre100 = (a: AlimentoDB) => a.por_100g.azucar_libre_g ?? (azucarLibre(a) ? a.por_100g.azucar_g ?? 0 : 0);
 const EDULCORANTES = new Set(['gaseosa-cero']);
 
 export type Sello = 'sodio' | 'azucares' | 'grasas' | 'edulcorantes';
@@ -28,7 +30,7 @@ export function sellos(a: AlimentoDB): Sello[] {
   if (esNatural(a)) return [];
   const p = a.por_100g, k = p.kcal ?? 0, na = p.sodio_mg ?? 0, out: Sello[] = [];
   if (k < 5 ? na >= 40 : (na >= 300 || na / k >= 1)) out.push('sodio');
-  if (azucarLibre(a) && k > 0 && ((p.azucar_g ?? 0) * 4) / k >= 0.1) out.push('azucares');
+  if (k > 0 && (azucarLibre100(a) * 4) / k >= 0.1) out.push('azucares');
   if (k > 0 && ((p.grasa_sat_g ?? 0) * 9) / k >= 0.1) out.push('grasas');
   if (EDULCORANTES.has(a.id)) out.push('edulcorantes');
   return out;
@@ -69,7 +71,7 @@ export function saludDelDia(items: { alimento_id: string; cantidad: number; anad
     const n = nutrientes(a, x.cantidad);
     sumar('sodio', a.nombre, n.n('sodio_mg'));
     sumar('grasaSat', a.nombre, n.n('grasa_sat_g'));
-    if (azucarLibre(a)) sumar('azucar', a.nombre, n.n('azucar_g'));
+    sumar('azucar', a.nombre, (azucarLibre100(a) * n.g) / 100);
     d.fibra += n.n('fibra_g');
     if ((a.categoria === 'frutas' && !a.id.startsWith('pulpa-')) || a.categoria === 'verduras') d.frutasVerduras += n.g;
   }
