@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { nutrientes, type AlimentoDB } from './alimentos';
 
 export interface AnadidoBandeja { alimento: AlimentoDB; cantidad: number; texto: string }
-export interface ItemBandeja { alimento: AlimentoDB; cantidad: number; texto: string; anadidos?: AnadidoBandeja[]; nombre?: string | null } // nombre: «Ensalada de la casa»
+export interface ItemBandeja { alimento: AlimentoDB; cantidad: number; texto: string; anadidos?: AnadidoBandeja[]; nombre?: string | null; medida?: string | null } // nombre: «Ensalada de la casa»; medida: «1 puntica»
 
 // Calorías de un ítem de la bandeja con sus añadidos
 export const kcalBandeja = (it: ItemBandeja) =>

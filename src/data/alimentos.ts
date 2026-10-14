@@ -34,6 +34,34 @@ export const MINERALES: [string, string, number][] = [
 export const FOTOS = 'https://sergiosaacx.github.io/kalo/fotos/';
 export const fotoDe = (a: AlimentoDB) => a.foto_url ?? null;
 
+// Las medidas que se pueden escoger (1 ala entera, 1 alita, 1 puntica…): la porción base primero, sin «100 g» ni repetidas
+export function medidas(a: AlimentoDB) {
+  const vistas = new Set<string>();
+  return [a.porcion_base, ...(a.porciones ?? [])].filter(p => {
+    if (!p || !(p.gramos > 0) || /^100\s?g$/.test(p.texto) || vistas.has(p.texto)) return false;
+    vistas.add(p.texto);
+    return true;
+  });
+}
+// Lo anotado (en porciones base) en la medida que se escogió al anotarlo (preferida: «1 puntica»).
+// Sin ella: la base en pasos de ½ (lo de siempre); si no cuadra, se leen los gramos.
+export function leerMedida(a: AlimentoDB, cantidad: number, preferida?: string | null) {
+  const g = cantidad * a.porcion_base.gramos;
+  const ms = medidas(a);
+  const cuadra = (k: number) => {
+    const n = g / ms[k].gramos, paso = k === 0 ? 2 : 1; // la base acepta medias porciones; las demás, unidades enteras
+    return n >= 0.5 && Math.abs(n * paso - Math.round(n * paso)) < 0.02 ? { indice: k, medida: ms[k], n: Math.round(n * paso) / paso } : null;
+  };
+  const k = preferida ? ms.findIndex(p => p.texto === preferida) : -1;
+  return (k >= 0 ? cuadra(k) : null) ?? (ms.length ? cuadra(0) : null);
+}
+// Cómo se lee lo anotado: «6 × 1 puntica», «1 taza» o, si no cuadra con ninguna medida, sus gramos
+export function textoMedida(a: AlimentoDB, cantidad: number, preferida?: string | null) {
+  const m = leerMedida(a, cantidad, preferida);
+  if (!m) return `${Math.round(cantidad * a.porcion_base.gramos).toLocaleString('es-CO')} g`;
+  return m.n === 1 ? m.medida.texto : `${m.n.toLocaleString('es-CO')} × ${m.medida.texto}`;
+}
+
 export const sinTildes = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 // Búsqueda por palabras: «carne de cerdo» o «cerdo carne» encuentran lo que tenga «carne» y «cerdo», en cualquier orden

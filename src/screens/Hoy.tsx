@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Anillo } from '../components/Anillo';
-import { nutrientesItem, useAlimentos, type AlimentoDB } from '../data/alimentos';
+import { nutrientesItem, textoMedida, useAlimentos, type AlimentoDB } from '../data/alimentos';
 import { COMIDAS, hoyISO, moverItems, nombreComida, usePlanDia, type ComidaId, type ItemPlan } from '../data/plan';
 import { Personalizado, Semana, lunesDe, rangoTxt } from './Resumen';
 import { TarjetaAgua } from '../components/Agua';
@@ -244,7 +244,7 @@ export function Hoy({ irA, agregarA, verRestante, editar, aviso }: { irA: (tab: 
                       <View style={{ flex: 1, minWidth: 0, gap: 2, opacity: op }}>
                         <Text style={[s.b14, { fontSize: 15 }]} numberOfLines={1}>{it.nombre ?? f.nombre}</Text>
                         <Text style={[s.muted13, { fontSize: 12 }]} numberOfLines={1}>
-                          {ens ? trae : q === 1 ? f.porcion_base.texto : `${q.toLocaleString('es-CO')} × ${f.porcion_base.texto}`}
+                          {ens ? trae : textoMedida(f, q, it.medida)}
                         </Text>
                         {ad.length > 0 && <Text style={[s.muted13, { fontSize: 12, color: C.fat }]} numberOfLines={1}>+ {ad.join(', ')}</Text>}
                       </View>
